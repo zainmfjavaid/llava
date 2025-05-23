@@ -1,0 +1,4 @@
+recording-*.wav
+node_modules
+.env
+.claude/
