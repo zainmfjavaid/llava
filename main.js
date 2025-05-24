@@ -10,8 +10,6 @@ const { exec } = require('child_process');
 
 let audioRecordingProcess = null;
 let transcriptionConnection = null;
-let audioFileStream = null;
-let outputPath = null;
 let audioLevelProcess = null;
 
 function createWindow() {
@@ -51,7 +49,7 @@ ipcMain.handle('start-transcription', async (event) => {
 
     // Setup live transcription connection
     transcriptionConnection = deepgram.listen.live({
-      model: 'nova-2',
+      model: 'nova-3',
       language: 'en-US',
       smart_format: true,
       interim_results: true,
@@ -81,10 +79,6 @@ ipcMain.handle('start-transcription', async (event) => {
       console.log('[Deepgram] Connection closed');
     });
 
-    // Create file for audio recording
-    const timestamp = Date.now();
-    outputPath = path.join(process.cwd(), `recording-${timestamp}.wav`);
-    audioFileStream = fs.createWriteStream(outputPath);
 
     // Setup FFmpeg arguments for audio capture with input queue buffering
     const args = ['-y', '-fflags', 'nobuffer', '-thread_queue_size', '512'];
@@ -105,11 +99,6 @@ ipcMain.handle('start-transcription', async (event) => {
 
     // Handle audio data
     audioRecordingProcess.stdout.on('data', (chunk) => {
-      // Write to file for verification
-      if (audioFileStream) {
-        audioFileStream.write(chunk);
-      }
-      
       // Send to Deepgram for live transcription
       if (transcriptionConnection && transcriptionConnection.getReadyState() === 1) {
         transcriptionConnection.send(chunk);
@@ -125,8 +114,8 @@ ipcMain.handle('start-transcription', async (event) => {
       audioRecordingProcess = null;
     });
 
-    console.log('[Main] Transcription started, recording to:', outputPath);
-    return outputPath;
+    console.log('[Main] Transcription started');
+    return 'Recording started';
 
   } catch (error) {
     console.error('[Main] Failed to start transcription:', error);
@@ -143,11 +132,6 @@ ipcMain.handle('stop-transcription', () => {
     audioRecordingProcess = null;
   }
 
-  // Close file stream
-  if (audioFileStream) {
-    audioFileStream.end();
-    audioFileStream = null;
-  }
 
   // Close Deepgram connection
   if (transcriptionConnection) {
@@ -155,11 +139,8 @@ ipcMain.handle('stop-transcription', () => {
     transcriptionConnection = null;
   }
 
-  const savedFile = outputPath;
-  outputPath = null;
-  
-  console.log('[Main] Transcription stopped, file saved:', savedFile);
-  return savedFile;
+  console.log('[Main] Transcription stopped');
+  return 'Recording stopped';
 });
 
 ipcMain.handle('get-audio-devices', async () => {

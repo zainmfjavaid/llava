@@ -1,0 +1,769 @@
+:root {
+    --text-dark-color: #353539;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    padding: 3rem;
+    max-width: 1000px;
+    width: 98%;
+    height: 95vh;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+}
+
+.initial-screen {
+    text-align: center;
+}
+
+.recording-screen {
+    display: none;
+    height: 100%;
+    flex-direction: column;
+}
+
+.recording-screen[style*="display: block"] {
+    display: flex !important;
+}
+
+.content-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0;
+}
+
+.notes-input, .notes-display {
+    margin-bottom: 6rem;
+}
+
+h1 {
+    color: var(--text-dark-color);
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    font-weight: 600;
+}
+
+.record-btn {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(238, 90, 36, 0.3);
+}
+
+.record-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(238, 90, 36, 0.4);
+}
+
+.title-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-dark-color);
+    background: transparent;
+    margin: 2rem 0 0 0;
+    padding: 0.5rem 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    resize: none;
+    overflow: hidden;
+    line-height: 1.2;
+}
+
+.title-input::placeholder {
+    color: #a0aec0;
+}
+
+.notes-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    color: var(--text-dark-color);
+    background: transparent;
+    resize: none;
+    min-height: 400px;
+    font-family: inherit;
+    line-height: 1.6;
+}
+
+.notes-display {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    outline: none;
+}
+
+.notes-display:focus {
+    outline: none;
+}
+
+.notes-input::placeholder {
+    color: #a0aec0;
+}
+
+.recording-controls {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 2rem;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.transcript-content-wrapper {
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    background: #f7fafc;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 4px 0 12px rgba(0,0,0,0.15), -4px 0 12px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    order: 1;
+}
+
+.recording-controls.transcript-open .transcript-content-wrapper {
+    width: 480px;
+    height: 380px;
+}
+
+.controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    height: 50px;
+    background: #f7fafc;
+    border-radius: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    order: 2;
+}
+
+.recording-controls.expanded .controls-row {
+    width: auto;
+    min-width: 140px;
+}
+
+.recording-controls.transcript-open .controls-row {
+    width: 480px;
+    border-radius: 0 0 20px 20px;
+    box-shadow: none;
+}
+
+.audio-visualizer {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    border-radius: 15px;
+    transition: background-color 0.3s ease;
+    height: 30px;
+    position: relative;
+}
+
+.recording-controls:not(.expanded):not(.transcript-open) .audio-visualizer {
+    padding: 0.5rem 0.75rem;
+}
+
+.audio-visualizer:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+.audio-visualizer::after {
+    content: '▲';
+    margin-left: 6px;
+    font-size: 10px;
+    color: #718096;
+    transition: transform 0.1s ease;
+    display: inline-block;
+    line-height: 1;
+}
+
+.recording-controls.transcript-open .audio-visualizer::after {
+    transform: rotate(180deg);
+}
+
+.audio-bar {
+    width: 3px;
+    background: linear-gradient(to top, #667eea, #764ba2);
+    border-radius: 1.5px;
+    transition: height 0.3s ease;
+}
+
+.audio-bar.recording {
+    animation: audioWave 1.5s ease-in-out infinite;
+}
+
+.audio-bar:nth-child(1) { height: 8px; }
+.audio-bar:nth-child(2) { height: 16px; }
+.audio-bar:nth-child(3) { height: 8px; }
+
+.audio-bar.recording:nth-child(1) { animation-delay: 0s; }
+.audio-bar.recording:nth-child(2) { animation-delay: 0.3s; }
+.audio-bar.recording:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes audioWave {
+    0%, 100% { height: 6px; opacity: 0.5; }
+    50% { height: 20px; opacity: 1; }
+}
+
+.stop-btn {
+    width: 28px;
+    height: 28px;
+    background: #e53e3e;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.stop-btn:hover {
+    background: #c53030;
+    transform: scale(1.05);
+}
+
+.stop-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 1px;
+    transform: translate(-50%, -50%);
+}
+
+.resume-text {
+    color: #38a169;
+    font-weight: 500;
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+.transcript-content-wrapper {
+    width: 480px;
+    height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform-origin: bottom center;
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.recording-controls.transcript-open .transcript-content-wrapper {
+    height: 380px;
+}
+
+.transcript-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.transcript-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dark-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.header-icons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.header-icon {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: #718096;
+    transition: color 0.2s ease;
+    position: relative;
+}
+
+.header-icon:hover {
+    color: var(--text-dark-color);
+}
+
+.copy-icon {
+    display: block;
+}
+
+.settings-icon {
+    display: block;
+}
+
+.settings-icon.hidden {
+    display: none;
+}
+
+.settings-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    padding: 1rem;
+    width: 260px;
+    display: none;
+    z-index: 1100;
+    border: 1px solid #e2e8f0;
+    cursor: default;
+}
+
+.settings-dropdown.show {
+    display: block;
+}
+
+.audio-section {
+    margin-bottom: 1rem;
+}
+
+.audio-label {
+    font-size: 0.75rem;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.audio-device {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dark-color);
+    margin-bottom: 0.75rem;
+}
+
+.audio-level-container {
+    margin-bottom: 1rem;
+}
+
+.audio-level-label {
+    font-size: 0.75rem;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.audio-level-bars {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 12px;
+    width: 100%;
+}
+
+.audio-level-bar {
+    flex: 1;
+    background: #e2e8f0;
+    border-radius: 6px;
+    transition: background-color 0.1s ease;
+    width: 12px;
+    height: 6px;
+}
+
+.audio-level-bar.active {
+    background: #48bb78;
+}
+
+.sound-settings-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.2s ease;
+}
+
+.sound-settings-btn:hover {
+    background: #5a67d8;
+}
+
+.transcript-content {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-dark-color);
+    white-space: pre-wrap;
+}
+
+.transcript-content:empty::before {
+    content: "Transcript will appear here...";
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.close-transcript {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #718096;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.close-transcript:hover {
+    background-color: #f7fafc;
+}
+
+.transcript-content {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-dark-color);
+    white-space: pre-wrap;
+    position: relative;
+}
+
+.transcript-content:empty::before {
+    content: "Transcript will appear here...";
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.scroll-to-bottom-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 24px;
+    background: #9f7aea !important;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(159, 122, 234, 0.3);
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+.scroll-to-bottom-btn:hover {
+    background: #805ad5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(159, 122, 234, 0.4);
+}
+
+.scroll-to-bottom-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: white;
+}
+
+
+.controls-bottom-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    order: 2;
+}
+
+.left-controls {
+    display: flex;
+    align-items: center;
+}
+
+.recording-controls.transcript-open .controls-bottom-row {
+    width: 480px;
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08), 4px 4px 8px rgba(0,0,0,0.08), -4px 4px 8px rgba(0,0,0,0.08);
+    border-top: 1px solid #e2e8f0;
+    justify-content: center;
+    padding: 0.5rem 1.5rem;
+    background: #f7fafc;
+    gap: 0;
+    height: 50px;
+    box-sizing: border-box;
+}
+
+.recording-controls.transcript-open .controls-row {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+.generate-notes-btn {
+    background: #9f7aea;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 0.5rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12), 2px 0 8px rgba(0,0,0,0.08), -2px 0 8px rgba(0,0,0,0.08), 0 -2px 8px rgba(0,0,0,0.08);
+    height: 50px;
+}
+
+.generate-notes-btn:hover {
+    background: #805ad5;
+}
+
+.recording-controls.transcript-open .generate-notes-btn {
+    background: transparent;
+    color: #9f7aea;
+    box-shadow: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 15px;
+    height: auto;
+}
+
+.recording-controls.transcript-open .generate-notes-btn:hover {
+    background: rgba(159, 122, 234, 0.1);
+    color: #805ad5;
+    transform: none;
+    box-shadow: none;
+}
+
+.generate-notes-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.separator {
+    display: none;
+    color: #e2e8f0;
+    font-size: 1.2rem;
+    font-weight: 300;
+    align-self: center;
+    margin: 0 1rem;
+}
+
+.recording-controls.transcript-open .separator {
+    display: block;
+}
+
+/* Hide separator when generate notes button is not visible */
+.generate-notes-btn[style*="display: none"] + .separator,
+.separator:has(+ .generate-notes-btn[style*="display: none"]) {
+    display: none !important;
+}
+
+/* Gray wave bars when paused (not recording) */
+.audio-bar.paused {
+    background: #a0aec0;
+}
+
+.divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 0.5rem 0 1.5rem;
+}
+
+.recording-controls.transcript-open.expanded .controls-row {
+    width: unset !important;
+}
+
+/* Generated notes styling */
+.generated-notes {
+    color: #0B224799;
+}
+
+/* User input styling - black text for user content */
+.notes-display {
+    color: var(--text-dark-color);
+}
+
+/* User headers styling */
+.user-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-dark-color);
+    outline: none;
+}
+
+/* Ensure normal text after user headers has normal weight */
+.user-header + * {
+    font-weight: normal;
+}
+
+/* Reset font weight for text nodes following headers */
+.notes-display * {
+    font-weight: inherit;
+}
+
+.notes-display {
+    font-weight: normal;
+}
+
+/* User bullet list styling */
+.user-bullet-list {
+    margin: 0.25rem 0;
+    padding-left: 1.5rem;
+    color: var(--text-dark-color);
+}
+
+.user-bullet-list .user-bullet-item {
+    margin: 0.25rem 0;
+    color: var(--text-dark-color);
+    outline: none;
+    list-style-type: disc;
+}
+
+.user-bullet-list .user-bullet-list .user-bullet-item {
+    list-style-type: circle;
+}
+
+.user-bullet-list .user-bullet-list .user-bullet-list .user-bullet-item {
+    list-style-type: square;
+}
+
+/* Smooth transition for edited AI content */
+.generated-notes .user-modified {
+    color: var(--text-dark-color);
+    transition: color 0.3s ease;
+}
+
+/* Ensure newly typed content in notes is black */
+.notes-display > *:not(.generated-notes) {
+    color: var(--text-dark-color);
+}
+
+.generated-notes llava\:userinsp {
+    color: var(--text-dark-color) !important;
+    display: inline;
+}
+
+/* Markdown styling for generated notes */
+.generated-notes h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem 0;
+    color: inherit;
+}
+
+.generated-notes h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.75rem 0;
+    color: inherit;
+}
+
+.generated-notes h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+    color: inherit;
+}
+
+/* Increase top margin for headers that aren't the first */
+.generated-notes h1:not(:first-child) {
+    margin-top: 2.25rem; /* 1.5rem * 1.5 = 2.25rem */
+}
+
+.generated-notes h2:not(:first-child) {
+    margin-top: 1.875rem; /* 1.25rem * 1.5 = 1.875rem */
+}
+
+.generated-notes h3:not(:first-child) {
+    margin-top: 1.5rem; /* 1rem * 1.5 = 1.5rem */
+}
+
+.generated-notes h3::first-letter {
+    color: rgba(204, 207, 215, 1);
+}
+
+.generated-notes strong {
+    font-weight: 600;
+    color: inherit;
+}
+
+.generated-notes ul {
+    margin: 0.25rem 0;
+    padding-left: 1.5rem;
+}
+
+.generated-notes li {
+    margin: 0.25rem 0;
+    list-style-type: disc;
+}
+
+/* Remove default paragraph margins inside list items to prevent excessive spacing */
+.generated-notes li > p {
+    margin: 0;
+}
+
+.generated-notes ul ul {
+    margin: 0.25rem 0;
+    padding-left: 1.5rem;
+}
+
+.generated-notes ul ul li {
+    list-style-type: circle;
+}
+
+.generated-notes ul ul ul li {
+    list-style-type: square;
+}
+
+.generated-notes .external-link {
+    color: #667eea;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.generated-notes .external-link:hover {
+    color: #5a67d8;
+} 
