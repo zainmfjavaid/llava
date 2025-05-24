@@ -125,6 +125,13 @@ h1 {
     color: #a0aec0;
 }
 
+/* Placeholder support for contentEditable div */
+.notes-input[contenteditable="true"]:empty:before {
+    content: attr(data-placeholder);
+    color: #a0aec0;
+    pointer-events: none;
+}
+
 .recording-controls {
     position: fixed;
     bottom: 0;
@@ -766,4 +773,41 @@ h1 {
 
 .generated-notes .external-link:hover {
     color: #5a67d8;
+}
+
+/* Streaming content styling */
+.streaming-content {
+    position: relative;
+}
+
+.streaming-content::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background: #667eea;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: text-bottom;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* Retry message styling */
+.retry-message {
+    padding: 0.5rem;
+    background: rgba(159, 122, 234, 0.1);
+    border-radius: 8px;
+    border-left: 3px solid #9f7aea;
+    margin: 0.5rem 0;
+    animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(-10px); }
+    10%, 90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
 } 

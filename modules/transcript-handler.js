@@ -2,6 +2,8 @@ import { elements, showCopySuccess, updateSeparatorVisibility } from './dom-util
 
 let currentTranscript = '';
 let autoScrollEnabled = true;    // Auto-scroll state for transcript
+let lastSpeaker = null;          // Track the last speaker for line breaks
+let lastEndTime = 0;             // Track when the last segment ended
 
 // Handle Deepgram transcription results
 export function handleTranscriptionResult(data) {
@@ -12,16 +14,74 @@ export function handleTranscriptionResult(data) {
     const transcript = alternative.transcript;
     
     if (transcript && transcript.trim().length > 0) {
+      // Get timing information
+      const segmentStart = data.start || 0;
+      const segmentDuration = data.duration || 0;
+      const segmentEnd = segmentStart + segmentDuration;
+      
+      // Determine the primary speaker for this segment (for line break detection)
+      let primarySpeaker = null;
+      if (alternative.words && alternative.words.length > 0) {
+        // Find the most common speaker in this segment
+        const speakerCounts = {};
+        alternative.words.forEach(word => {
+          if (word.speaker !== undefined) {
+            speakerCounts[word.speaker] = (speakerCounts[word.speaker] || 0) + 1;
+          }
+        });
+        
+        if (Object.keys(speakerCounts).length > 0) {
+          primarySpeaker = parseInt(Object.keys(speakerCounts).reduce((a, b) => 
+            speakerCounts[a] > speakerCounts[b] ? a : b
+          ));
+        }
+      }
+      
+      // Calculate gap from last segment
+      const timeSinceLastSegment = segmentStart - lastEndTime;
+      
+      // Determine if we need a double newline
+      let needsNewline = false;
+      
+      // Add newline if speaker changed
+      if (primarySpeaker !== null && lastSpeaker !== null && primarySpeaker !== lastSpeaker) {
+        needsNewline = true;
+      }
+      
+      // Add newline if there's a gap > 0.2 seconds and we have actual content
+      if (timeSinceLastSegment > 0.2 && lastEndTime > 0 && currentTranscript.trim().length > 0) {
+        needsNewline = true;
+      }
+      
       if (data.is_final) {
         // Final result - add to permanent transcript
-        currentTranscript += transcript + ' ';
+        let textToAdd = transcript;
+        
+        // Add double newline prefix if needed
+        if (needsNewline) {
+          textToAdd = '\n\n' + textToAdd;
+        }
+        
+        currentTranscript += textToAdd + ' ';
         elements.transcriptContent.textContent = currentTranscript;
+        
+        // Update tracking variables
+        lastSpeaker = primarySpeaker;
+        lastEndTime = segmentEnd;
+        
         if (autoScrollEnabled) {
           elements.transcriptContent.scrollTop = elements.transcriptContent.scrollHeight;
         }
       } else {
         // Interim result - show temporarily
-        elements.transcriptContent.textContent = currentTranscript + transcript;
+        let textToAdd = transcript;
+        
+        // Add double newline prefix if needed for interim display
+        if (needsNewline) {
+          textToAdd = '\n\n' + textToAdd;
+        }
+        
+        elements.transcriptContent.textContent = currentTranscript + textToAdd;
         if (autoScrollEnabled) {
           elements.transcriptContent.scrollTop = elements.transcriptContent.scrollHeight;
         }
@@ -82,6 +142,8 @@ export async function copyTranscript() {
 export function clearTranscript() {
   currentTranscript = '';
   elements.transcriptContent.textContent = '';
+  lastSpeaker = null;
+  lastEndTime = 0;
 }
 
 // Get current transcript

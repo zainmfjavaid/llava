@@ -55,6 +55,7 @@ ipcMain.handle('start-transcription', async (event) => {
       interim_results: true,
       utterance_end_ms: 1000,
       vad_events: true,
+      diarize: true,
       encoding: 'linear16',
       sample_rate: 16000,
       channels: 1
