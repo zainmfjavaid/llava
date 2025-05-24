@@ -1,7 +1,34 @@
 import { elements, isTitleEmpty, autoResizeTitle, startWaveAnimations, stopWaveAnimations, updateSeparatorVisibility } from './dom-utils.js';
-import { generateTitle } from './notes-processor.js';
+import { generateTitle, setCurrentNoteId } from './notes-processor.js';
 import { stopAudioMonitoring } from './audio-monitor.js';
 import { getCurrentTranscript } from './transcript-handler.js';
+import { APIClient } from './api-client.js';
+import { authManager } from './auth-manager.js';
+import { noteStorage } from './note-storage.js';
+
+// Helper function to extract raw notes with line breaks preserved
+function extractRawNotes() {
+  if (elements.notesInput.tagName === 'TEXTAREA') {
+    return elements.notesInput.value || '';
+  } else {
+    // For contentEditable divs, convert HTML to plain text while preserving line breaks
+    const clone = elements.notesInput.cloneNode(true);
+    
+    // Replace <br> tags with newlines
+    clone.querySelectorAll('br').forEach(br => {
+      br.replaceWith('\n');
+    });
+    
+    // Replace block elements with newlines
+    clone.querySelectorAll('div, p, h1, h2, h3, h4, h5, h6, li').forEach(block => {
+      if (block.nextSibling) {
+        block.insertAdjacentText('afterend', '\n');
+      }
+    });
+    
+    return clone.textContent || '';
+  }
+}
 
 let isRecording = false;
 
@@ -17,6 +44,9 @@ export async function startRecording() {
     isRecording = true;
     // Clear transcript content
     elements.transcriptContent.textContent = '';
+    
+    // Clear current note for new recording
+    noteStorage.clearCurrentNote();
     
     // Start wave animations
     startWaveAnimations();
@@ -46,9 +76,27 @@ export async function stopRecording() {
     elements.settingsDropdown.classList.remove('show');
     stopAudioMonitoring();
     
-    // Generate title if title field is empty and we have a transcript (non-blocking)
+    // Get current transcript for logging
     const currentTranscript = getCurrentTranscript();
+    const currentNotes = extractRawNotes();
     
+    // Log transcript and raw notes to backend when stopping
+    if (authManager.isAuthenticated() && currentTranscript.trim()) {
+      try {
+        const note = await noteStorage.createNote(
+          elements.titleInput.value || 'Untitled Recording',
+          currentTranscript.trim(),
+          currentNotes,
+          '' // No AI-generated notes yet
+        );
+        await setCurrentNoteId(note.id);
+        console.log('Transcript logged to backend');
+      } catch (error) {
+        console.error('Failed to log transcript to backend:', error);
+      }
+    }
+    
+    // Generate title if title field is empty and we have a transcript (non-blocking)
     if (isTitleEmpty() && currentTranscript.trim()) {
       generateTitle().then(generatedTitle => {
         if (generatedTitle && isTitleEmpty()) {
