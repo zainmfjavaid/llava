@@ -153,7 +153,9 @@
     background: transparent;
     transition: background 0.18s, color 0.18s;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     position: relative;
 }
 
@@ -167,6 +169,14 @@
     font-weight: 500;
 }
 
+.note-content-sidebar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* allow text truncation */
+    width: 100%;
+}
+
 .note-title-sidebar {
     display: -webkit-box;
     -webkit-line-clamp: 1;
@@ -175,6 +185,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: normal;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
 }
 
 .note-date-sidebar {
@@ -256,4 +269,34 @@
 .note-item-sidebar {
     padding-left: 25px;
     padding-right: 25px; /* balance right side */
+}
+
+/* Note content and delete button structure */
+.delete-note-btn {
+    opacity: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.note-item-sidebar:hover .delete-note-btn {
+    opacity: 1;
+}
+
+.delete-note-btn:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.delete-note-btn svg {
+    width: 19px;
+    height: 19px;
+    color: var(--text-dark-color);
 }

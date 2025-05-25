@@ -170,8 +170,15 @@ class SidebarManager {
           <div class="date-section-header">${dateKey}</div>
           ${dateNotes.map(note => `
             <div class="note-item-sidebar" data-note-id="${note.id}" onclick="sidebarManager.selectNote('${note.id}')">
-              <div class="note-title-sidebar">${this.escapeHtml(note.title)}</div>
-              <div class="note-date-sidebar">${this.formatTime(note.date_created)}</div>
+              <div class="note-content-sidebar">
+                <div class="note-title-sidebar">${this.escapeHtml(note.title)}</div>
+                <div class="note-date-sidebar">${this.formatTime(note.date_created)}</div>
+              </div>
+              <button class="delete-note-btn" onclick="event.stopPropagation(); sidebarManager.deleteNote('${note.id}')" title="Delete note">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
             </div>
           `).join('')}
         </div>
@@ -454,6 +461,49 @@ class SidebarManager {
   // Get current selected note ID
   getCurrentNoteId() {
     return this.currentNoteId;
+  }
+
+  // Delete a note
+  async deleteNote(noteId) {
+    try {
+      // Show confirmation dialog
+      const confirmDelete = confirm('Are you sure you want to delete this note? This action cannot be undone.');
+      if (!confirmDelete) {
+        return;
+      }
+
+      // Call API to delete the note
+      await APIClient.deleteNote(noteId);
+      
+      // If we deleted the currently active note, clear the current state
+      if (this.currentNoteId === noteId) {
+        this.currentNoteId = null;
+        window.currentNoteId = null;
+        window.currentNote = null;
+        
+        // Navigate back to home screen if this was the active note
+        const initialScreen = document.getElementById('initialScreen');
+        const recordingScreen = document.getElementById('recordingScreen');
+        
+        if (initialScreen && recordingScreen) {
+          recordingScreen.style.display = 'none';
+          initialScreen.style.display = 'block';
+          
+          // Update home button states
+          const { updateHomeButtonStates } = await import('./landing-page.js');
+          updateHomeButtonStates();
+        }
+      }
+      
+      // Refresh the sidebar to remove the deleted note
+      await this.refreshNotes();
+      
+      console.log('Note deleted successfully');
+      
+    } catch (error) {
+      console.error('Failed to delete note:', error);
+      alert('Failed to delete note. Please try again.');
+    }
   }
 }
 
