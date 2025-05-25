@@ -12,8 +12,8 @@ export function initializeAuthUI() {
   const authError = document.getElementById('authError');
   const emailInput = document.getElementById('emailInput');
   const passwordInput = document.getElementById('passwordInput');
-  const userEmail = document.getElementById('userEmail');
-  const logoutBtn = document.getElementById('logoutBtn');
+  // const userEmail = document.getElementById('userEmail'); // Removed as home-header is gone
+  // const logoutBtn = document.getElementById('logoutBtn'); // Removed as home-header is gone
 
   let isLoginMode = true;
 
@@ -25,17 +25,21 @@ export function initializeAuthUI() {
   }
 
   function showAuthScreen() {
+    authScreen.classList.remove('visually-hidden');
     authScreen.style.display = 'flex';
+    initialScreen.classList.add('visually-hidden');
     initialScreen.style.display = 'none';
     clearError();
   }
 
   function showMainApp() {
-    authScreen.style.display = 'none';
+    initialScreen.classList.remove('visually-hidden');
     initialScreen.style.display = 'flex';
+    authScreen.classList.add('visually-hidden');
+    authScreen.style.display = 'none';
     const user = authManager.getCurrentUser();
     if (user) {
-      userEmail.textContent = user.email;
+      // userEmail.textContent = user.email; // Removed as home-header is gone
     }
     
     // Initialize landing page functionality
@@ -53,9 +57,9 @@ export function initializeAuthUI() {
     authError.style.display = 'block';
   }
 
-  function setLoginMode(isLogin) {
-    isLoginMode = isLogin;
-    if (isLogin) {
+  function updateAuthMode() {
+    clearError();
+    if (isLoginMode) {
       loginTab.classList.add('active');
       signupTab.classList.remove('active');
       authBtn.textContent = 'Sign In';
@@ -64,78 +68,53 @@ export function initializeAuthUI() {
       signupTab.classList.add('active');
       authBtn.textContent = 'Sign Up';
     }
-    clearError();
   }
 
-  // Tab switching
-  loginTab.addEventListener('click', () => setLoginMode(true));
-  signupTab.addEventListener('click', () => setLoginMode(false));
+  loginTab.addEventListener('click', () => {
+    isLoginMode = true;
+    updateAuthMode();
+  });
 
-  // Form submission
+  signupTab.addEventListener('click', () => {
+    isLoginMode = false;
+    updateAuthMode();
+  });
+
   authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const email = emailInput.value.trim();
+    const email = emailInput.value;
     const password = passwordInput.value;
-
-    if (!email || !password) {
-      showError('Please fill in all fields');
-      return;
-    }
-
-    if (password.length < 6) {
-      showError('Password must be at least 6 characters');
-      return;
-    }
-
     authBtn.disabled = true;
     authBtn.textContent = isLoginMode ? 'Signing In...' : 'Signing Up...';
-    clearError();
 
     try {
       if (isLoginMode) {
         await authManager.login(email, password);
       } else {
-        await authManager.register(email, password);
+        await authManager.signup(email, password);
       }
-      
       showMainApp();
-      
-      // Initialize app modules after successful authentication
-      if (window.initializeAppModules) {
-        window.initializeAppModules();
-      }
-      
-      // Clear form
-      emailInput.value = '';
-      passwordInput.value = '';
-      
     } catch (error) {
       showError(error.message);
     } finally {
       authBtn.disabled = false;
-      authBtn.textContent = isLoginMode ? 'Sign In' : 'Sign Up';
+      updateAuthMode(); // Reset button text
     }
   });
 
-  // Logout
-  logoutBtn.addEventListener('click', () => {
-    authManager.logout();
-    showAuthScreen();
-  });
-
-  // Enter key handling
-  emailInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      passwordInput.focus();
-    }
-  });
-
-  passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      authForm.dispatchEvent(new Event('submit'));
-    }
-  });
+  // if (logoutBtn) { // Removed as home-header is gone
+  //   logoutBtn.addEventListener('click', async () => {
+  //     try {
+  //       await authManager.logout();
+  //       showAuthScreen();
+  //       emailInput.value = ''; // Clear fields on logout
+  //       passwordInput.value = '';
+  //     } catch (error) {
+  //       console.error('Logout failed:', error);
+  //       showError('Logout failed. Please try again.');
+  //     }
+  //   });
+  // }
 
   return {
     showAuthScreen,

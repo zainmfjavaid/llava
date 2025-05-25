@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <title>LLava Record</title>
     <link rel="stylesheet" href="styles/index.css">
+    <link rel="preload" href="images/blue_noise.jpg" as="image">
+    <link rel="preload" href="images/yellow_noise.png" as="image">
   </head>
   <body>
     <div class="container">
       <!-- Auth Screen -->
-      <div class="auth-screen" id="authScreen">
+      <div class="auth-screen visually-hidden" id="authScreen">
         <div class="auth-container">
           <h1 class="auth-title">LLava Record</h1>
           <div class="auth-form" id="authForm">
@@ -31,30 +33,26 @@
       </div>
 
       <!-- Initial Screen -->
-      <div class="initial-screen" id="initialScreen" style="display: none;">
-        <div class="home-header">
-          <div class="user-info">
-            <span id="userEmail"></span>
-            <button class="logout-btn" id="logoutBtn">Logout</button>
-          </div>
-        </div>
-        
+      <div class="initial-screen visually-hidden" id="initialScreen">
         <div class="home-content">
           <!-- Chat Section -->
           <div class="chat-section">
             <h1 class="chat-title">Ask Anything</h1>
-            <div class="chat-container">
+            <div class="chat-input-container">
               <textarea 
-                class="chat-input" 
+                name="chat" 
                 id="chatInput" 
-                placeholder="Howdy! How can I help?"
-                rows="4"
+                class="chat scrollbar-thin" 
+                placeholder="Howdy! How can I help?" 
+                autofocus
               ></textarea>
-              <button class="chat-send-btn" id="chatSendBtn" disabled>
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
-              </button>
+              <div class="send-row">
+                <button class="chat-send" id="chatSendBtn" disabled>
+                  <svg width="16" height="15" viewBox="0 0 16 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.70711 0.292893C8.31658 -0.0976315 7.68342 -0.0976314 7.29289 0.292893L0.928932 6.65686C0.538407 7.04738 0.538407 7.68054 0.928932 8.07107C1.31946 8.46159 1.95262 8.46159 2.34315 8.07107L8 2.41421L13.6569 8.07107C14.0474 8.46159 14.6805 8.46159 15.0711 8.07107C15.4616 7.68054 15.4616 7.04738 15.0711 6.65685L8.70711 0.292893ZM9 15L9 1L7 1L7 15L9 15Z" fill="white"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
           

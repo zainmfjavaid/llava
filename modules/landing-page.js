@@ -7,17 +7,49 @@ export function initializeLandingPage() {
   const chatSendBtn = document.getElementById('chatSendBtn');
   const notesList = document.getElementById('notesList');
   
-  // Enable/disable chat send button based on input
+  // Initialize textarea with auto-resizing and send button functionality
   if (chatInput && chatSendBtn) {
-    chatInput.addEventListener('input', () => {
-      chatSendBtn.disabled = !chatInput.value.trim();
-    });
+    initTextarea(chatInput, chatSendBtn);
     
     // Handle chat send (placeholder for now)
     chatSendBtn.addEventListener('click', () => {
       console.log('Chat functionality not implemented yet');
     });
+    
+    // Handle Enter key to send
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!chatSendBtn.disabled) {
+          chatSendBtn.click();
+        }
+      }
+    });
   }
+
+function initTextarea(textarea, sendButton = null) {
+  if (sendButton) {
+    sendButton.disabled = true;
+  }
+
+  // Set initial height
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.max(textarea.scrollHeight, 60) + 'px';
+  textarea.style.overflowY = 'hidden';
+
+  textarea.addEventListener('input', () => {
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    const newHeight = Math.min(textarea.scrollHeight, 360);
+    textarea.style.height = `${newHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 360 ? 'scroll' : 'hidden';
+
+    // Enable/disable send button based on content
+    if (sendButton) {
+      sendButton.disabled = textarea.value.trim() === '';
+    }
+  });
+}
   
   // Load and display past notes
   loadPastNotes();
@@ -65,8 +97,15 @@ function displayNotes(notes) {
         <div class="date-header">${dateKey}</div>
         ${dateNotes.map(note => `
           <div class="note-item" onclick="openNote('${note.id}')">
-            <div class="note-title">${escapeHtml(note.title)}</div>
-            <div class="note-time">${formatTime(note.date_created)}</div>
+            <div class="note-content">
+              <div class="note-title">${escapeHtml(note.title)}</div>
+              <div class="note-time">${formatTime(note.date_created)}</div>
+            </div>
+            <button class="note-delete-btn" onclick="event.stopPropagation(); deleteNote('${note.id}')" title="Delete note">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+              </svg>
+            </button>
           </div>
         `).join('')}
       </div>
@@ -85,7 +124,8 @@ function groupNotesByDate(notes) {
   const groups = {};
   
   notes.forEach(note => {
-    const noteDate = new Date(note.date_created);
+    // Backend sends UTC timestamps, so we need to treat them as UTC
+    const noteDate = new Date(note.date_created + 'Z');
     const noteDateOnly = new Date(noteDate.getFullYear(), noteDate.getMonth(), noteDate.getDate());
     
     let dateKey;
@@ -110,7 +150,7 @@ function groupNotesByDate(notes) {
   
   // Sort each group by time (most recent first)
   Object.keys(groups).forEach(dateKey => {
-    groups[dateKey].sort((a, b) => new Date(b.date_created) - new Date(a.date_created));
+    groups[dateKey].sort((a, b) => new Date(b.date_created + 'Z') - new Date(a.date_created + 'Z'));
   });
   
   // Return groups in the right order: Today, Yesterday, then by date descending
@@ -123,8 +163,8 @@ function groupNotesByDate(notes) {
     .filter(key => key !== 'Today' && key !== 'Yesterday')
     .sort((a, b) => {
       // Parse the date strings back to compare them
-      const dateA = new Date(groups[a][0].date_created);
-      const dateB = new Date(groups[b][0].date_created);
+      const dateA = new Date(groups[a][0].date_created + 'Z');
+      const dateB = new Date(groups[b][0].date_created + 'Z');
       return dateB - dateA;
     })
     .forEach(key => {
@@ -135,7 +175,8 @@ function groupNotesByDate(notes) {
 }
 
 function formatTime(dateString) {
-  const date = new Date(dateString);
+  // Backend sends UTC timestamps, so we need to treat them as UTC
+  const date = new Date(dateString + 'Z');
   return date.toLocaleTimeString('en-US', { 
     hour: 'numeric', 
     minute: '2-digit',
@@ -165,6 +206,22 @@ window.openNote = async function(noteId) {
   } catch (error) {
     console.error('Failed to load note:', error);
     alert('Failed to load note. Please try again.');
+  }
+};
+
+// Global function to delete a note (called from onclick)
+window.deleteNote = async function(noteId) {
+  if (!confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    await APIClient.deleteNote(noteId);
+    // Reload the notes list to reflect the deletion
+    loadPastNotes();
+  } catch (error) {
+    console.error('Failed to delete note:', error);
+    alert('Failed to delete note. Please try again.');
   }
 };
 
