@@ -52,7 +52,7 @@ ipcMain.handle('start-transcription', async (event) => {
       model: 'nova-3',
       language: 'en-US',
       smart_format: true,
-      interim_results: true,
+      interim_results: false,
       utterance_end_ms: 1000,
       vad_events: true,
       diarize: true,

@@ -580,8 +580,9 @@ export function initializeNotesAsEditable() {
   notesDiv.contentEditable = true;
   notesDiv.setAttribute('data-placeholder', 'Write notes...');
   
-  // Replace the textarea with the div
-  elements.notesInput.parentNode.replaceChild(notesDiv, elements.notesInput);
+  // Replace the textarea with the div inside the wrapper
+  const notesWrapper = elements.notesInput.parentNode;
+  notesWrapper.replaceChild(notesDiv, elements.notesInput);
   
   // Update the reference to point to the new div
   elements.notesInput = notesDiv;

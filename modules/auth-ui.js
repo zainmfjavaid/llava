@@ -19,7 +19,7 @@ export function initializeAuthUI() {
 
   // Check if user is already authenticated
   if (authManager.isAuthenticated()) {
-    showMainApp();
+    showMainApp().catch(console.error);
   } else {
     showAuthScreen();
   }
@@ -32,7 +32,7 @@ export function initializeAuthUI() {
     clearError();
   }
 
-  function showMainApp() {
+  async function showMainApp() {
     initialScreen.classList.remove('visually-hidden');
     initialScreen.style.display = 'flex';
     authScreen.classList.add('visually-hidden');
@@ -43,7 +43,7 @@ export function initializeAuthUI() {
     }
     
     // Initialize landing page functionality
-    initializeLandingPage();
+    await initializeLandingPage();
     addBackToHomeButton();
   }
 
@@ -93,7 +93,7 @@ export function initializeAuthUI() {
       } else {
         await authManager.signup(email, password);
       }
-      showMainApp();
+      await showMainApp();
     } catch (error) {
       showError(error.message);
     } finally {

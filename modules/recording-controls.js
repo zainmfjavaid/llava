@@ -47,7 +47,8 @@ function clearRecordingSession() {
     textarea.placeholder = 'Write notes...';
     textarea.value = '';
     
-    notesInput.parentNode.replaceChild(textarea, notesInput);
+    const notesWrapper = notesInput.parentNode;
+    notesWrapper.replaceChild(textarea, notesInput);
     elements.notesInput = textarea;
   } else {
     notesInput.value = '';
@@ -87,6 +88,10 @@ export async function startRecording() {
     // Switch to recording screen
     elements.initialScreen.style.display = 'none';
     elements.recordingScreen.style.display = 'block';
+    
+    // Update home button states
+    const { updateHomeButtonStates } = await import('./landing-page.js');
+    updateHomeButtonStates();
     
     isRecording = true;
     
@@ -141,6 +146,11 @@ export async function stopRecording() {
           '' // No AI-generated notes yet
         );
         await setCurrentNoteId(note.id);
+        
+        // Refresh sidebar to show the new note
+        const { refreshSidebar } = await import('./sidebar-manager.js');
+        await refreshSidebar();
+        
         console.log('Transcript logged to backend');
       } catch (error) {
         console.error('Failed to log transcript to backend:', error);

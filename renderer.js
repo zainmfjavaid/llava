@@ -10,6 +10,7 @@ import { initializeRecordingControls } from './modules/recording-controls.js';
 import { initializeSettingsListeners } from './modules/settings-manager.js';
 import { initializeAuthUI } from './modules/auth-ui.js';
 import { authManager } from './modules/auth-manager.js';
+import { initializeSidebarHomeButtons } from './modules/landing-page.js';
 
 // Handle Deepgram transcription results
 window.electronAPI.onTranscriptionResult(handleTranscriptionResult);
@@ -32,7 +33,7 @@ function initialize() {
     if (e.key === 'llava_user') {
       if (authManager.isAuthenticated() && !authUI.isAuthenticated()) {
         // User just logged in
-        authUI.showMainApp();
+        authUI.showMainApp().catch(console.error);
         initializeAppModules();
       } else if (!authManager.isAuthenticated() && authUI.isAuthenticated()) {
         // User just logged out
@@ -65,6 +66,9 @@ function initializeAppModules() {
   
   // Initialize settings management
   initializeSettingsListeners();
+  
+  // Initialize sidebar home buttons
+  initializeSidebarHomeButtons();
   
   appModulesInitialized = true;
 }

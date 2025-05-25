@@ -11,7 +11,34 @@ import { initializeStreamingNotesArea, handleStreamingResponse } from './streami
 let currentNoteId = null;
 let notesUpdateTimeout = null;
 let titleUpdateTimeout = null;
+let resizeTimeout = null;
 let notesGenerated = false; // Flag to track if AI notes have been generated
+
+// Auto-resize title input based on content
+function autoResizeTitleInput() {
+  const titleInput = elements.titleInput;
+  if (!titleInput) return;
+  
+  // Calculate the minimum height based on line-height and font-size
+  const computedStyle = window.getComputedStyle(titleInput);
+  const lineHeight = parseFloat(computedStyle.lineHeight);
+  const fontSize = parseFloat(computedStyle.fontSize);
+  const minHeight = lineHeight || (fontSize * 1.2);
+  
+  // Temporarily set height to the minimum to get accurate scrollHeight
+  titleInput.style.height = minHeight + 'px';
+  
+  // Get the actual content height
+  const scrollHeight = titleInput.scrollHeight;
+  
+  // Use the larger of scrollHeight or minHeight
+  const newHeight = Math.max(scrollHeight, minHeight);
+  
+  // Only update if height actually changed
+  if (titleInput.style.height !== newHeight + 'px') {
+    titleInput.style.height = newHeight + 'px';
+  }
+}
 
 // Set current note ID for backend updates
 export async function setCurrentNoteId(noteId) {
@@ -108,6 +135,11 @@ function debouncedUpdateTitle() {
         }
         
         await APIClient.updateNote(currentNoteId, updateData);
+        
+        // Refresh sidebar to show the updated title
+        const { refreshSidebar } = await import('./sidebar-manager.js');
+        await refreshSidebar();
+        
         console.log('Title updated in backend');
       } catch (error) {
         console.error('Failed to update title in backend:', error);
@@ -143,6 +175,11 @@ export async function generateTitle() {
         }
         
         await APIClient.updateNote(currentNoteId, updateData);
+        
+        // Refresh sidebar to show the updated title
+        const { refreshSidebar } = await import('./sidebar-manager.js');
+        await refreshSidebar();
+        
         console.log('Note updated with generated title');
       } catch (error) {
         console.error('Failed to update note with title:', error);
@@ -171,8 +208,9 @@ export function createEditableNotesDiv(notes) {
     notesDiv.contentEditable = true;
     notesDiv.innerHTML = processedNotes;
     
-    // Replace the textarea with the div
-    elements.notesInput.parentNode.replaceChild(notesDiv, elements.notesInput);
+    // Replace the textarea with the div inside the wrapper
+    const notesWrapper = elements.notesInput.parentNode;
+    notesWrapper.replaceChild(notesDiv, elements.notesInput);
     
     // Update the reference to point to the new div
     elements.notesInput = notesDiv;
@@ -266,8 +304,22 @@ export function initializeNotesListeners() {
   // Initialize the notes input as editable with markdown support
   initializeNotesAsEditable();
   
-  // Add title input listener for debounced updates
+  // Add title input listener for debounced updates and auto-resize
   elements.titleInput.addEventListener('input', () => {
+    autoResizeTitleInput();
     debouncedUpdateTitle();
   });
+  
+  // Add debounced window resize listener to handle width changes
+  window.addEventListener('resize', () => {
+    if (resizeTimeout) {
+      clearTimeout(resizeTimeout);
+    }
+    resizeTimeout = setTimeout(() => {
+      autoResizeTitleInput();
+    }, 100); // 100ms debounce
+  });
+  
+  // Set initial height for title input
+  autoResizeTitleInput();
 }

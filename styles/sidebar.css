@@ -1,0 +1,259 @@
+/* Sidebar Styles */
+.main-container {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    height: 100%;
+    width: 100%;
+}
+
+.sidebar {
+    width: 320px;
+    height: calc(100vh - 80px);
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 25px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    transition: background 0.4s, background-color 0.4s, width 0.2s;
+    z-index: 2;
+    margin: 20px 0 20px 20px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.sidebar.focused {
+    background: rgba(255, 255, 255, 0.65);
+    transition: background 0.4s, background-color 0.4s, width 0.2s;
+}
+
+.content-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.content-wrapper .home-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 100px;
+}
+
+/* Sidebar collapsed state */
+.sidebar.collapsed {
+    width: 56px;
+    cursor: pointer;
+}
+
+.sidebar.collapsed .notes-list-sidebar,
+.sidebar.collapsed .sidebar-heading {
+    display: none !important;
+}
+
+/* Sticky toggle button at top of sidebar */
+.sidebar-toggle-btn {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    cursor: pointer;
+    background: transparent;
+}
+
+/* Home Button Styles - match note item styling */
+.home-btn {
+    padding: 12px 25px 12px 25px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #999;
+    background: transparent;
+    border: none;
+    transition: background 0.18s, color 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    margin: 8px 0 8px 0;
+    font-weight: 400;
+}
+
+.home-btn:hover {
+    background: rgba(116,131,242,0.05);
+}
+
+.home-btn.active {
+    background: rgba(116,131,242,0.13);
+    color: #7483f2;
+    font-weight: 500;
+}
+
+.home-btn svg {
+    width: 18px;
+    height: 18px;
+    color: #999;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.home-btn.active svg {
+    color: #7483f2;
+    fill: currentColor;
+}
+
+/* Hide home button when sidebar is collapsed */
+.sidebar.collapsed .home-btn {
+    display: none !important;
+}
+
+.sidebar-heading {
+    padding: 15px 0 5px 25px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-dark-color);
+}
+
+.sidebar.collapsed .sidebar-heading {
+    display: none !important;
+}
+
+/* Notes list for sidebar */
+.notes-list-sidebar {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    border-radius: 10px;
+    scrollbar-width: none;
+}
+
+.notes-list-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.note-item-sidebar {
+    padding: 7px 25px 7px 25px;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--text-dark-color);
+    background: transparent;
+    transition: background 0.18s, color 0.18s;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.note-item-sidebar:hover {
+    background: rgba(116,131,242,0.05);
+}
+
+.note-item-sidebar.active {
+    background: rgba(116,131,242,0.13);
+    color: #7483f2;
+    font-weight: 500;
+}
+
+.note-title-sidebar {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+}
+
+.note-date-sidebar {
+    font-size: 14px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.loading-notes-sidebar, .empty-notes-sidebar {
+    padding: 18px;
+    color: #aaa;
+    text-align: center;
+    font-size: 15px;
+}
+
+/* Date section headers in sidebar */
+.date-section-sidebar {
+    margin-top: 20px;
+}
+
+.date-section-sidebar:first-child {
+    margin-top: 0;
+}
+
+.date-section-header {
+    padding: 10px 0 5px 25px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Airy sidebar focus/blur logic */
+.sidebar.focused {
+    background: rgba(255, 255, 255, 0.65);
+}
+
+/* When sidebar is collapsed, allow click anywhere to expand */
+.sidebar.collapsed {
+    cursor: pointer;
+}
+
+/* Hide note sections when collapsed */
+.sidebar.collapsed .notes-list-sidebar,
+.sidebar.collapsed .date-section-sidebar,
+.sidebar.collapsed .date-section-header,
+.sidebar.collapsed .note-item-sidebar {
+    display: none !important;
+}
+
+/* ---- Layout adjustments: make sidebar full height and space elements ---- */
+
+/* Ensure all main containers space the sidebar and content apart */
+.main-container {
+    justify-content: space-between; /* push sidebar to left and content to right */
+    height: 100vh; /* guarantee full viewport height */
+}
+
+/* Content wrapper should take up remaining width */
+.content-wrapper {
+    flex: 1;
+    min-width: 0; /* allow flexbox to properly shrink content */
+}
+
+/* ---- Sidebar spacing tweaks ---- */
+.sidebar {
+    margin-top: 40px;
+    margin-bottom: 40px;
+    margin-left: 40px;
+}
+
+/* Reduce excessive left indentation within the sidebar */
+.sidebar-heading,
+.date-section-header {
+    padding-left: 25px;
+}
+
+.note-item-sidebar {
+    padding-left: 25px;
+    padding-right: 25px; /* balance right side */
+}
