@@ -1,5 +1,6 @@
 // auth-ui.js - Authentication UI management
 import { authManager } from './auth-manager.js';
+import { initializeLandingPage, addBackToHomeButton } from './landing-page.js';
 
 export function initializeAuthUI() {
   const authScreen = document.getElementById('authScreen');
@@ -36,6 +37,10 @@ export function initializeAuthUI() {
     if (user) {
       userEmail.textContent = user.email;
     }
+    
+    // Initialize landing page functionality
+    initializeLandingPage();
+    addBackToHomeButton();
   }
 
   function clearError() {

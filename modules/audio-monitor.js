@@ -17,25 +17,20 @@ export function paintAudioLevel(level) {
 }
 
 // Load audio-input device info (primary mic name)
-// 1. Try Web Media enumeration (high accuracy once mic permission is granted)
-// 2. Fallback to the existing Electron IPC method
+// Only enumerate devices, don't request permission yet
 export async function loadAudioDevice() {
   try {
-    // Ensure permission so device labels are populated
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-
+    // First try to enumerate without requesting permission
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioInputs = devices.filter((d) => d.kind === 'audioinput');
 
-    if (audioInputs.length > 0) {
-      // Prefer the currently active track label if available
-      const label = audioInputs[0].label || 'Microphone';
-      elements.audioDevice.textContent = label;
+    if (audioInputs.length > 0 && audioInputs[0].label) {
+      // Device labels are available (permission was granted before)
+      elements.audioDevice.textContent = audioInputs[0].label;
       return;
     }
   } catch (err) {
-    // Browser / permission error – fall back to IPC method
-    console.warn('Web API audio device detection failed:', err);
+    console.warn('Web API audio device enumeration failed:', err);
   }
 
   // Fallback – ask main process via IPC (may be less accurate but cross-platform)
@@ -45,10 +40,30 @@ export async function loadAudioDevice() {
       elements.audioDevice.textContent = device.name || 'Microphone';
     } catch (ipcErr) {
       console.error('Failed to load audio device via IPC:', ipcErr);
-      elements.audioDevice.textContent = 'Unknown Device';
+      elements.audioDevice.textContent = 'Default Microphone';
     }
   } else {
-    elements.audioDevice.textContent = 'Unknown Device';
+    elements.audioDevice.textContent = 'Default Microphone';
+  }
+}
+
+// Load audio device info after permission is granted (during recording)
+export async function loadAudioDeviceWithPermission() {
+  try {
+    // Request permission and get actual device info
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter((d) => d.kind === 'audioinput');
+
+    if (audioInputs.length > 0) {
+      elements.audioDevice.textContent = audioInputs[0].label || 'Microphone';
+    }
+    
+    // Stop the temporary stream
+    stream.getTracks().forEach(track => track.stop());
+  } catch (err) {
+    console.warn('Failed to load audio device with permission:', err);
   }
 }
 

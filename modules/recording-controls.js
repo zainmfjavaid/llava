@@ -1,6 +1,6 @@
 import { elements, isTitleEmpty, autoResizeTitle, startWaveAnimations, stopWaveAnimations, updateSeparatorVisibility } from './dom-utils.js';
 import { generateTitle, setCurrentNoteId } from './notes-processor.js';
-import { stopAudioMonitoring } from './audio-monitor.js';
+import { startAudioMonitoring, stopAudioMonitoring, loadAudioDeviceWithPermission } from './audio-monitor.js';
 import { getCurrentTranscript } from './transcript-handler.js';
 import { APIClient } from './api-client.js';
 import { authManager } from './auth-manager.js';
@@ -32,9 +32,56 @@ function extractRawNotes() {
 
 let isRecording = false;
 
+// Clear all fields and reset UI for new recording
+function clearRecordingSession() {
+  // Clear title input
+  elements.titleInput.value = '';
+  
+  // Clear and reset notes input to textarea
+  const notesInput = elements.notesInput;
+  if (notesInput.contentEditable === 'true' || notesInput.tagName === 'DIV') {
+    // Convert back to textarea
+    const textarea = document.createElement('textarea');
+    textarea.className = 'notes-input';
+    textarea.id = 'notesInput';
+    textarea.placeholder = 'Write notes...';
+    textarea.value = '';
+    
+    notesInput.parentNode.replaceChild(textarea, notesInput);
+    elements.notesInput = textarea;
+  } else {
+    notesInput.value = '';
+  }
+  
+  // Clear transcript content
+  elements.transcriptContent.textContent = '';
+  
+  // Remove any existing resume text
+  const existingResumeText = document.querySelector('.resume-text');
+  if (existingResumeText) existingResumeText.remove();
+  
+  // Reset recording controls state
+  elements.recordingControls.classList.remove('expanded');
+  elements.recordingControls.classList.remove('transcript-open');
+  
+  // Show stop button, hide generate notes button
+  elements.stopBtn.style.display = 'block';
+  elements.generateNotesBtn.style.display = 'none';
+  
+  // Update separator visibility
+  updateSeparatorVisibility();
+  
+  // Clear global note references
+  window.currentNoteId = null;
+  window.currentNote = null;
+}
+
 // Start recording
 export async function startRecording() {
   try {
+    // Clear all previous session data
+    clearRecordingSession();
+    
     await window.electronAPI.startTranscription();
     
     // Switch to recording screen
@@ -42,14 +89,18 @@ export async function startRecording() {
     elements.recordingScreen.style.display = 'block';
     
     isRecording = true;
-    // Clear transcript content
-    elements.transcriptContent.textContent = '';
     
     // Clear current note for new recording
     noteStorage.clearCurrentNote();
     
     // Start wave animations
     startWaveAnimations();
+    
+    // Start audio monitoring for the level meters
+    startAudioMonitoring();
+    
+    // Load actual device info now that we have permission
+    loadAudioDeviceWithPermission();
     
     // Show settings icon when recording starts
     elements.settingsIcon.classList.remove('hidden');
@@ -144,6 +195,9 @@ export async function resumeRecording() {
     
     // Start wave animations again
     startWaveAnimations();
+    
+    // Start audio monitoring again
+    startAudioMonitoring();
     
     // Show settings icon when resuming
     elements.settingsIcon.classList.remove('hidden');

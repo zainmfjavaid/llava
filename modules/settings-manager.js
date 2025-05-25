@@ -1,5 +1,6 @@
 import { elements } from './dom-utils.js';
 import { startAudioMonitoring, stopAudioMonitoring } from './audio-monitor.js';
+import { getIsRecording } from './recording-controls.js';
 
 // Settings functionality
 export function toggleSettings(e) {
@@ -7,9 +8,16 @@ export function toggleSettings(e) {
   elements.settingsDropdown.classList.toggle('show');
   
   if (elements.settingsDropdown.classList.contains('show')) {
-    startAudioMonitoring();
+    // Only start audio monitoring if currently recording
+    if (getIsRecording()) {
+      startAudioMonitoring();
+    }
   } else {
-    stopAudioMonitoring();
+    // Only stop audio monitoring if we started it for settings
+    // Don't stop if recording is active (it should continue)
+    if (!getIsRecording()) {
+      stopAudioMonitoring();
+    }
   }
 }
 
@@ -22,7 +30,10 @@ export function preventSettingsClose(e) {
 export function handleDocumentClick(e) {
   if (!elements.settingsIcon.contains(e.target) && !elements.settingsDropdown.contains(e.target)) {
     elements.settingsDropdown.classList.remove('show');
-    stopAudioMonitoring();
+    // Only stop audio monitoring if not recording
+    if (!getIsRecording()) {
+      stopAudioMonitoring();
+    }
   }
 }
 
