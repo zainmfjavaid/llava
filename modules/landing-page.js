@@ -5,7 +5,7 @@ import { authManager } from './auth-manager.js';
 export function initializeLandingPage() {
   const chatInput = document.getElementById('chatInput');
   const chatSendBtn = document.getElementById('chatSendBtn');
-  const notesGrid = document.getElementById('notesGrid');
+  const notesList = document.getElementById('notesList');
   
   // Enable/disable chat send button based on input
   if (chatInput && chatSendBtn) {
@@ -24,15 +24,15 @@ export function initializeLandingPage() {
 }
 
 async function loadPastNotes() {
-  const notesGrid = document.getElementById('notesGrid');
-  if (!notesGrid) return;
+  const notesList = document.getElementById('notesList');
+  if (!notesList) return;
   
   try {
     const notes = await APIClient.getUserNotes();
     displayNotes(notes);
   } catch (error) {
     console.error('Failed to load notes:', error);
-    notesGrid.innerHTML = `
+    notesList.innerHTML = `
       <div class="loading-notes">
         Failed to load notes. Please try again later.
       </div>
@@ -41,11 +41,11 @@ async function loadPastNotes() {
 }
 
 function displayNotes(notes) {
-  const notesGrid = document.getElementById('notesGrid');
-  if (!notesGrid) return;
+  const notesList = document.getElementById('notesList');
+  if (!notesList) return;
   
   if (notes.length === 0) {
-    notesGrid.innerHTML = `
+    notesList.innerHTML = `
       <div class="loading-notes">
         No notes yet. Start by recording your first session!
       </div>
@@ -53,17 +53,94 @@ function displayNotes(notes) {
     return;
   }
   
-  notesGrid.innerHTML = notes.map(note => `
-    <div class="note-tile" onclick="openNote('${note.id}')">
-      <div class="note-tile-title">${escapeHtml(note.title)}</div>
-      <div class="note-tile-preview">${escapeHtml(getPreviewText(note))}</div>
-      <div class="note-tile-status">
-        <span class="status-badge ${note.is_ai_enhanced ? 'ai-enhanced' : 'manual'}">
-          ${note.is_ai_enhanced ? 'AI Enhanced' : 'Manual Notes'}
-        </span>
+  // Group notes by date
+  const groupedNotes = groupNotesByDate(notes);
+  
+  // Generate HTML for each date group
+  let html = '';
+  Object.keys(groupedNotes).forEach(dateKey => {
+    const dateNotes = groupedNotes[dateKey];
+    html += `
+      <div class="date-group">
+        <div class="date-header">${dateKey}</div>
+        ${dateNotes.map(note => `
+          <div class="note-item" onclick="openNote('${note.id}')">
+            <div class="note-title">${escapeHtml(note.title)}</div>
+            <div class="note-time">${formatTime(note.date_created)}</div>
+          </div>
+        `).join('')}
       </div>
-    </div>
-  `).join('');
+    `;
+  });
+  
+  notesList.innerHTML = html;
+}
+
+function groupNotesByDate(notes) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const groups = {};
+  
+  notes.forEach(note => {
+    const noteDate = new Date(note.date_created);
+    const noteDateOnly = new Date(noteDate.getFullYear(), noteDate.getMonth(), noteDate.getDate());
+    
+    let dateKey;
+    if (noteDateOnly.getTime() === today.getTime()) {
+      dateKey = 'Today';
+    } else if (noteDateOnly.getTime() === yesterday.getTime()) {
+      dateKey = 'Yesterday';
+    } else {
+      // Format as "Mon, Jan 15" for other dates
+      dateKey = noteDate.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+    
+    if (!groups[dateKey]) {
+      groups[dateKey] = [];
+    }
+    groups[dateKey].push(note);
+  });
+  
+  // Sort each group by time (most recent first)
+  Object.keys(groups).forEach(dateKey => {
+    groups[dateKey].sort((a, b) => new Date(b.date_created) - new Date(a.date_created));
+  });
+  
+  // Return groups in the right order: Today, Yesterday, then by date descending
+  const orderedGroups = {};
+  if (groups['Today']) orderedGroups['Today'] = groups['Today'];
+  if (groups['Yesterday']) orderedGroups['Yesterday'] = groups['Yesterday'];
+  
+  // Add other dates in descending order
+  Object.keys(groups)
+    .filter(key => key !== 'Today' && key !== 'Yesterday')
+    .sort((a, b) => {
+      // Parse the date strings back to compare them
+      const dateA = new Date(groups[a][0].date_created);
+      const dateB = new Date(groups[b][0].date_created);
+      return dateB - dateA;
+    })
+    .forEach(key => {
+      orderedGroups[key] = groups[key];
+    });
+  
+  return orderedGroups;
+}
+
+function formatTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
 }
 
 function getPreviewText(note) {
@@ -100,7 +177,8 @@ async function reconstructNoteView(note) {
   if (recordingScreen) recordingScreen.style.display = 'block';
   
   // Import required modules
-  const { setCurrentNoteId, createEditableNotesDiv, processGeneratedNotes } = await import('./notes-processor.js');
+  const { setCurrentNoteId } = await import('./notes-processor.js');
+  const { processGeneratedNotes } = await import('./markdown-processor.js');
   const { elements, updateSeparatorVisibility } = await import('./dom-utils.js');
   
   // Clear any existing resume text and reset controls
@@ -117,23 +195,26 @@ async function reconstructNoteView(note) {
   // Set the current note ID for proper backend integration
   await setCurrentNoteId(note.id);
   
+  // Wait a moment for DOM to be ready
+  await new Promise(resolve => setTimeout(resolve, 50));
+  
   // Populate the fields
   const titleInput = document.getElementById('titleInput');
-  const notesInput = document.getElementById('notesInput');
+  let notesInput = document.getElementById('notesInput');
   const transcriptContent = document.getElementById('transcriptContent');
   const generateNotesBtn = document.getElementById('generateNotesBtn');
   const stopBtn = document.getElementById('stopBtn');
+  
+  // If notesInput is not found, try finding it with querySelector
+  if (!notesInput) {
+    notesInput = document.querySelector('.notes-input');
+  }
   
   if (titleInput) titleInput.value = note.title;
   
   // Set transcript content
   if (transcriptContent) {
     transcriptContent.textContent = note.transcript;
-  }
-  
-  // Always show the transcript panel in reconstruction mode
-  if (recordingControls) {
-    recordingControls.classList.add('transcript-open');
   }
   
   // Make sure audio monitoring is stopped during reconstruction

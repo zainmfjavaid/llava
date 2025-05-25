@@ -24,9 +24,8 @@ body {
     padding: 3rem;
     max-width: 1000px;
     width: 98%;
-    height: 95vh;
-    overflow-y: auto;
     transition: all 0.3s ease;
+    margin: 2rem auto;
 }
 
 /* Auth Screen Styles */
@@ -140,24 +139,33 @@ body {
 }
 
 .initial-screen {
-    text-align: center;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
     height: 100%;
+    overflow: hidden;
+}
+
+.home-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 2rem;
 }
 
 .user-info {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 1rem;
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 8px;
     font-size: 0.9rem;
     color: var(--text-dark-color);
+}
+
+.home-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 1rem;
 }
 
 .logout-btn {
@@ -177,7 +185,6 @@ body {
 
 .recording-screen {
     display: none;
-    height: 100%;
     flex-direction: column;
 }
 
@@ -186,8 +193,6 @@ body {
 }
 
 .content-area {
-    flex: 1;
-    overflow-y: auto;
     padding: 0 0;
 }
 
@@ -953,3 +958,232 @@ h1 {
     10%, 90% { opacity: 1; transform: translateY(0); }
     100% { opacity: 0; transform: translateY(-10px); }
 } 
+
+/* Home Page Styles */
+.chat-section {
+    margin-bottom: 2rem;
+}
+
+.chat-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-dark-color);
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.chat-container {
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.chat-input {
+    width: 100%;
+    min-height: 120px;
+    padding: 1.5rem;
+    border: 2px solid #e9ecef;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background: #fafbfc;
+    box-sizing: border-box;
+}
+
+.chat-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+.chat-input::placeholder {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.chat-send-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.chat-send-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.chat-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.chat-send-btn svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+    fill: currentColor;
+}
+
+/* Record Button Styles */
+.main-record-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 2rem auto;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(238, 90, 36, 0.3);
+    min-width: 160px;
+}
+
+.main-record-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(238, 90, 36, 0.4);
+}
+
+.record-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.record-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+/* Notes Section Styles */
+.notes-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.notes-list {
+    padding-right: 0.5rem;
+}
+
+.loading-notes {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 2rem;
+}
+
+/* Date Group Styles */
+.date-group {
+    margin-bottom: 2rem;
+}
+
+.date-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark-color);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Note Item Styles */
+.note-item {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: #fafbfc;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-item:hover {
+    background: white;
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.note-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-dark-color);
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+}
+
+.note-time {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Scrollbar Styling */
+.notes-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.notes-list::-webkit-scrollbar-track {
+    background: #f1f3f4;
+    border-radius: 3px;
+}
+
+.notes-list::-webkit-scrollbar-thumb {
+    background: #c1c7cd;
+    border-radius: 3px;
+}
+
+.notes-list::-webkit-scrollbar-thumb:hover {
+    background: #a8b0b8;
+}
+
+/* Back to Home Button Styles */
+.back-to-home-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    color: var(--text-dark-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+    align-self: flex-start;
+}
+
+.back-to-home-btn:hover {
+    background: #e9ecef;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.back-to-home-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}

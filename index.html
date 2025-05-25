@@ -32,27 +32,23 @@
 
       <!-- Initial Screen -->
       <div class="initial-screen" id="initialScreen" style="display: none;">
-        <div class="landing-header">
-          <h1 class="landing-title">LLava Record</h1>
+        <div class="home-header">
           <div class="user-info">
             <span id="userEmail"></span>
             <button class="logout-btn" id="logoutBtn">Logout</button>
           </div>
         </div>
         
-        <div class="landing-content">
+        <div class="home-content">
           <!-- Chat Section -->
           <div class="chat-section">
-            <div class="chat-header">
-              <h2>Chat with your notes</h2>
-              <p>Ask questions about your recorded content</p>
-            </div>
+            <h1 class="chat-title">Ask Anything</h1>
             <div class="chat-container">
               <textarea 
                 class="chat-input" 
                 id="chatInput" 
-                placeholder="Ask me anything about your notes..."
-                rows="3"
+                placeholder="Howdy! How can I help?"
+                rows="4"
               ></textarea>
               <button class="chat-send-btn" id="chatSendBtn" disabled>
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -62,29 +58,19 @@
             </div>
           </div>
           
-          <!-- Record Section -->
-          <div class="record-section">
-            <div class="record-header">
-              <h2>Start a new recording</h2>
-              <p>Capture your thoughts and generate smart notes</p>
+          <!-- Record Button -->
+          <button class="main-record-btn" id="recordBtn">
+            <div class="record-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="8"/>
+              </svg>
             </div>
-            <button class="main-record-btn" id="recordBtn">
-              <div class="record-icon">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="12" r="10"/>
-                </svg>
-              </div>
-              <span>Start Recording</span>
-            </button>
-          </div>
+            <span>Record</span>
+          </button>
           
           <!-- Past Notes Section -->
           <div class="notes-section">
-            <div class="notes-header">
-              <h2>Your Notes</h2>
-              <p>Access your previous recordings and generated notes</p>
-            </div>
-            <div class="notes-grid" id="notesGrid">
+            <div class="notes-list" id="notesList">
               <div class="loading-notes">Loading your notes...</div>
             </div>
           </div>
