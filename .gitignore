@@ -2,3 +2,6 @@ recording-*.wav
 node_modules
 .env
 .claude/
+build-llava.sh
+out/
+dist/

@@ -39,6 +39,24 @@
         </div>
       </div>
 
+      <!-- Permissions Screen -->
+      <div class="auth-screen visually-hidden" id="permissionScreen">
+        <div class="auth-container">
+          <h1 class="auth-title">Permissions</h1>
+          <div class="auth-form" id="permissionForm">
+            <div class="permission-item">
+              <span>Microphone</span>
+              <button type="button" class="auth-btn permission-action-btn" id="micPermBtn">Enable</button>
+            </div>
+            <div class="permission-item">
+              <span>System Audio</span>
+              <button type="button" class="auth-btn permission-action-btn" id="sysAudioPermBtn">Enable</button>
+            </div>
+            <button type="button" class="auth-btn" id="permContinueBtn" disabled>Continue</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Initial Screen -->
       <div class="initial-screen visually-hidden" id="initialScreen">
         <div class="main-container">

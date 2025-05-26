@@ -104,3 +104,31 @@
     font-size: 0.9rem;
     display: none;
 }
+
+/* Permissions Screen Specific Styles */
+.permission-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem; /* Increased margin for better spacing */
+    padding: 0.75rem 0; /* Padding for better visual separation */
+    border-bottom: 1px solid #e9ecef; /* Light border for separation */
+}
+
+.permission-item:last-of-type {
+    border-bottom: none; /* Remove border for the last item */
+    margin-bottom: 2rem; /* Extra margin before the continue button */
+}
+
+.permission-item span {
+    font-size: 1rem;
+    color: var(--text-dark-color);
+    font-weight: 500;
+}
+
+.permission-action-btn {
+    width: auto; /* Override full width for these buttons */
+    min-width: 120px; /* Ensure buttons have a decent minimum width */
+    padding: 0.75rem 1.5rem; /* Adjust padding for a more compact button */
+    margin-top: 0; /* Remove top margin as it's handled by permission-item */
+}

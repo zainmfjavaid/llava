@@ -16,6 +16,80 @@ export function initializeAuthUI() {
   const nameGroup = document.getElementById('nameGroup');
   // const userEmail = document.getElementById('userEmail'); // Removed as home-header is gone
   // const logoutBtn = document.getElementById('logoutBtn'); // Removed as home-header is gone
+  // Permission screen elements
+  const permissionScreen = document.getElementById('permissionScreen');
+  const micPermBtn = document.getElementById('micPermBtn');
+  const sysAudioPermBtn = document.getElementById('sysAudioPermBtn');
+  const permContinueBtn = document.getElementById('permContinueBtn');
+  let micGranted = false;
+  let sysAudioGranted = false;
+
+  // Permission handlers
+  function updateContinueState() {
+    permContinueBtn.disabled = !(micGranted && sysAudioGranted);
+  }
+  async function requestMicPermission() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micGranted = true;
+      micPermBtn.textContent = 'Enabled';
+      micPermBtn.disabled = true;
+      updateContinueState();
+      // Stop tracks
+      stream.getTracks().forEach(track => track.stop());
+    } catch (err) {
+      alert('Microphone permission denied.');
+    }
+  }
+  async function requestSysAudioPermission() {
+    // Attempt to start and immediately stop IPC-based audio monitoring
+    if (window.electronAPI && window.electronAPI.startAudioMonitoring && window.electronAPI.stopAudioMonitoring) {
+      await window.electronAPI.startAudioMonitoring();
+      // Small delay to give FFmpeg time to initialise
+      setTimeout(() => {
+        window.electronAPI.stopAudioMonitoring();
+      }, 500);
+      sysAudioGranted = true;
+      sysAudioPermBtn.textContent = 'Enabled';
+      sysAudioPermBtn.disabled = true;
+      updateContinueState();
+    } else {
+      // Fallback – assume granted since Electron main handles capture directly
+      sysAudioGranted = true;
+      sysAudioPermBtn.textContent = 'Enabled';
+      sysAudioPermBtn.disabled = true;
+      updateContinueState();
+    }
+  }
+  function hidePermissionScreen() {
+    permissionScreen.classList.add('visually-hidden');
+    permissionScreen.style.display = 'none';
+  }
+  function showPermissionScreen() {
+    // Hide other screens
+    authScreen.classList.add('visually-hidden');
+    authScreen.style.display = 'none';
+    initialScreen.classList.add('visually-hidden');
+    initialScreen.style.display = 'none';
+    // Reset state
+    micGranted = false;
+    sysAudioGranted = false;
+    micPermBtn.textContent = 'Enable';
+    micPermBtn.disabled = false;
+    sysAudioPermBtn.textContent = 'Enable';
+    sysAudioPermBtn.disabled = false;
+    updateContinueState();
+    // Show permission screen
+    permissionScreen.classList.remove('visually-hidden');
+    permissionScreen.style.display = 'flex';
+  }
+  // Permission button listeners
+  micPermBtn.addEventListener('click', requestMicPermission);
+  sysAudioPermBtn.addEventListener('click', requestSysAudioPermission);
+  permContinueBtn.addEventListener('click', async () => {
+    hidePermissionScreen();
+    await showMainApp();
+  });
 
   let isLoginMode = true;
 
@@ -27,6 +101,8 @@ export function initializeAuthUI() {
   }
 
   function showAuthScreen() {
+    // Ensure permission screen is hidden
+    hidePermissionScreen();
     authScreen.classList.remove('visually-hidden');
     authScreen.style.display = 'flex';
     initialScreen.classList.add('visually-hidden');
@@ -35,6 +111,8 @@ export function initializeAuthUI() {
   }
 
   async function showMainApp() {
+    // Ensure permission screen is hidden
+    hidePermissionScreen();
     initialScreen.classList.remove('visually-hidden');
     initialScreen.style.display = 'flex';
     authScreen.classList.add('visually-hidden');
@@ -100,10 +178,11 @@ export function initializeAuthUI() {
     try {
       if (isLoginMode) {
         await authManager.login(email, password);
+        await showMainApp();
       } else {
         await authManager.register(name, email, password);
+        showPermissionScreen();
       }
-      await showMainApp();
     } catch (error) {
       showError(error.message);
     } finally {

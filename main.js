@@ -1,5 +1,7 @@
 // main.js
 require('dotenv').config();
+// Add auto-update support via update.electronjs.org
+require('update-electron-app')();
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
