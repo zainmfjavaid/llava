@@ -2,57 +2,14 @@
 import { APIClient } from './api-client.js';
 import { authManager } from './auth-manager.js';
 import { sidebarManager } from './sidebar-manager.js';
+import { chatManager } from './chat-manager.js';
 
 export async function initializeLandingPage() {
-  const chatInput = document.getElementById('chatInput');
-  const chatSendBtn = document.getElementById('chatSendBtn');
-  
-  // Initialize textarea with auto-resizing and send button functionality
-  if (chatInput && chatSendBtn) {
-    initTextarea(chatInput, chatSendBtn);
-    
-    // Handle chat send (placeholder for now)
-    chatSendBtn.addEventListener('click', () => {
-      console.log('Chat functionality not implemented yet');
-    });
-    
-    // Handle Enter key to send
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (!chatSendBtn.disabled) {
-          chatSendBtn.click();
-        }
-      }
-    });
-  }
+  // Initialize chat functionality
+  chatManager.initialize();
 
   // Initialize sidebar
   await sidebarManager.initialize();
-
-function initTextarea(textarea, sendButton = null) {
-  if (sendButton) {
-    sendButton.disabled = true;
-  }
-
-  // Set initial height
-  textarea.style.height = 'auto';
-  textarea.style.height = Math.max(textarea.scrollHeight, 42) + 'px';
-  textarea.style.overflowY = 'hidden';
-
-  textarea.addEventListener('input', () => {
-    // Reset height to auto to get the correct scrollHeight
-    textarea.style.height = 'auto';
-    const newHeight = Math.min(Math.max(textarea.scrollHeight, 42), 360);
-    textarea.style.height = `${newHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > 360 ? 'scroll' : 'hidden';
-
-    // Enable/disable send button based on content
-    if (sendButton) {
-      sendButton.disabled = textarea.value.trim() === '';
-    }
-  });
-}
 }
 
 // Add back to home functionality
@@ -72,6 +29,9 @@ export function addBackToHomeButton() {
   `;
   
   backButton.addEventListener('click', async () => {
+    // If recording is active, stop it before navigating home
+    const { getIsRecording, stopRecording } = await import('./recording-controls.js');
+    if (getIsRecording()) await stopRecording();
     const initialScreen = document.getElementById('initialScreen');
     const recordingScreen = document.getElementById('recordingScreen');
     
@@ -97,15 +57,22 @@ export function addBackToHomeButton() {
 export function initializeSidebarHomeButtons() {
   const homeBtn = document.getElementById('homeBtn');
   const homeBtnRecording = document.getElementById('homeBtnRecording');
+  const homeBtnChat = document.getElementById('homeBtnChat');
   const backToHomeBtn = document.getElementById('backToHomeBtn');
+  const backToHomeBtnChat = document.getElementById('backToHomeBtnChat');
   
   // Function to navigate to home screen
   const navigateToHome = async () => {
+    // If recording is active, stop it before navigating home
+    const { getIsRecording, stopRecording } = await import('./recording-controls.js');
+    if (getIsRecording()) await stopRecording();
     const initialScreen = document.getElementById('initialScreen');
     const recordingScreen = document.getElementById('recordingScreen');
+    const chatScreen = document.getElementById('chatScreen');
     
     if (initialScreen) initialScreen.style.display = 'flex';
     if (recordingScreen) recordingScreen.style.display = 'none';
+    if (chatScreen) chatScreen.style.display = 'none';
     
     // Update Home button active states
     updateHomeButtonStates();
@@ -117,6 +84,8 @@ export function initializeSidebarHomeButtons() {
     // Clear current note data
     window.currentNoteId = null;
     window.currentNote = null;
+    // Clear any existing chat history when returning home
+    chatManager.clearChat();
   };
   
   // Add click listeners
@@ -126,35 +95,57 @@ export function initializeSidebarHomeButtons() {
   if (homeBtnRecording) {
     homeBtnRecording.addEventListener('click', navigateToHome);
   }
+  if (homeBtnChat) {
+    homeBtnChat.addEventListener('click', navigateToHome);
+  }
   if (backToHomeBtn) {
     backToHomeBtn.addEventListener('click', navigateToHome);
+  }
+  if (backToHomeBtnChat) {
+    backToHomeBtnChat.addEventListener('click', navigateToHome);
   }
   
   // Initialize active states
   updateHomeButtonStates();
+  // Sign out button functionality
+  const signOutBtns = document.querySelectorAll('.sidebar-signout-btn');
+  signOutBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      authManager.logout();
+      // Reload app to show auth screen
+      window.location.reload();
+    });
+  });
 }
 
 // Update Home button active states based on current screen
 export function updateHomeButtonStates() {
   const homeBtn = document.getElementById('homeBtn');
   const homeBtnRecording = document.getElementById('homeBtnRecording');
+  const homeBtnChat = document.getElementById('homeBtnChat');
   const initialScreen = document.getElementById('initialScreen');
   const recordingScreen = document.getElementById('recordingScreen');
+  const chatScreen = document.getElementById('chatScreen');
   
   // Home is active when:
-  // 1. initialScreen is visible (flex or empty string) AND recordingScreen is hidden
-  // 2. OR when no specific note is loaded (we're on the default home view)
+  // 1. initialScreen is visible (flex or empty string) AND other screens are hidden
+  // 2. OR when no specific note/chat is loaded (we're on the default home view)
   const isInitialScreenVisible = initialScreen && 
     (initialScreen.style.display === 'flex' || initialScreen.style.display === '');
   const isRecordingScreenHidden = !recordingScreen || 
     recordingScreen.style.display === 'none' || recordingScreen.style.display === '';
+  const isChatScreenHidden = !chatScreen || 
+    chatScreen.style.display === 'none' || chatScreen.style.display === '';
   
-  const isOnHomeScreen = isInitialScreenVisible && isRecordingScreenHidden;
+  const isOnHomeScreen = isInitialScreenVisible && isRecordingScreenHidden && isChatScreenHidden;
   
   if (homeBtn) {
     homeBtn.classList.toggle('active', isOnHomeScreen);
   }
   if (homeBtnRecording) {
     homeBtnRecording.classList.toggle('active', isOnHomeScreen);
+  }
+  if (homeBtnChat) {
+    homeBtnChat.classList.toggle('active', isOnHomeScreen);
   }
 }

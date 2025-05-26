@@ -36,6 +36,7 @@ let isRecording = false;
 function clearRecordingSession() {
   // Clear title input
   elements.titleInput.value = '';
+  autoResizeTitle();
   
   // Clear and reset notes input to textarea
   const notesInput = elements.notesInput;
@@ -89,6 +90,9 @@ export async function startRecording() {
     elements.initialScreen.style.display = 'none';
     elements.recordingScreen.style.display = 'block';
     
+    // Auto-resize title textarea as soon as recording screen is shown
+    autoResizeTitle();
+    
     // Update home button states
     const { updateHomeButtonStates } = await import('./landing-page.js');
     updateHomeButtonStates();
@@ -108,10 +112,7 @@ export async function startRecording() {
     loadAudioDeviceWithPermission();
     
     // Show settings icon when recording starts
-    elements.settingsIcon.classList.remove('hidden');
-    
-    console.log('Recording started');
-    
+    elements.settingsIcon.classList.remove('hidden');    
   } catch (error) {
     console.error('Failed to start transcription:', error);
     alert(`Error starting recording: ${error.message}`);
@@ -187,10 +188,7 @@ export async function stopRecording() {
     elements.recordingControls.classList.add('expanded');
     
     // Add click handler for resume
-    resumeText.addEventListener('click', resumeRecording);
-    
-    console.log('Recording stopped');
-    
+    resumeText.addEventListener('click', resumeRecording);    
   } catch (error) {
     console.error('Failed to stop transcription:', error);
     alert(`Error stopping recording: ${error.message}`);
@@ -244,6 +242,8 @@ export function initializeRecordingControls() {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.target === elements.recordingScreen && elements.recordingScreen.style.display === 'block') {
+        // Auto-resize title textarea when recording screen is displayed
+        autoResizeTitle();
         elements.titleInput.focus();
       }
     });

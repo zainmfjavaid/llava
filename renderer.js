@@ -1,5 +1,15 @@
 // renderer.js - Main renderer entry point
 import { loadAudioDevice, initializeAudioIPCListeners } from './modules/audio-monitor.js';
+
+// Global function to open a note by ID
+window.openNote = async function(noteId) {
+  try {
+    const { sidebarManager } = await import('./modules/sidebar-manager.js');
+    await sidebarManager.selectNote(noteId);
+  } catch (error) {
+    console.error('Failed to open note:', error);
+  }
+};
 import { 
   handleTranscriptionResult, 
   handleTranscriptionError, 
@@ -10,7 +20,7 @@ import { initializeRecordingControls } from './modules/recording-controls.js';
 import { initializeSettingsListeners } from './modules/settings-manager.js';
 import { initializeAuthUI } from './modules/auth-ui.js';
 import { authManager } from './modules/auth-manager.js';
-import { initializeSidebarHomeButtons } from './modules/landing-page.js';
+import { initializeSidebarHomeButtons, initializeLandingPage } from './modules/landing-page.js';
 
 // Handle Deepgram transcription results
 window.electronAPI.onTranscriptionResult(handleTranscriptionResult);
@@ -69,6 +79,9 @@ function initializeAppModules() {
   
   // Initialize sidebar home buttons
   initializeSidebarHomeButtons();
+  
+  // Initialize landing page with chat
+  initializeLandingPage();
   
   appModulesInitialized = true;
 }

@@ -7,8 +7,6 @@ let lastEndTime = 0;             // Track when the last segment ended
 
 // Handle Deepgram transcription results
 export function handleTranscriptionResult(data) {
-  console.log('[Renderer] Deepgram result:', data);
-  
   if (data.channel && data.channel.alternatives && data.channel.alternatives.length > 0) {
     const alternative = data.channel.alternatives[0];
     const transcript = alternative.transcript;
@@ -37,19 +35,11 @@ export function handleTranscriptionResult(data) {
         }
       }
       
-      // Calculate gap from last segment
-      const timeSinceLastSegment = segmentStart - lastEndTime;
-      
       // Determine if we need a double newline
       let needsNewline = false;
       
       // Add newline if speaker changed
       if (primarySpeaker !== null && lastSpeaker !== null && primarySpeaker !== lastSpeaker) {
-        needsNewline = true;
-      }
-      
-      // Add newline if there's a gap > 0.2 seconds and we have actual content
-      if (timeSinceLastSegment > 0.2 && lastEndTime > 0 && currentTranscript.trim().length > 0) {
         needsNewline = true;
       }
       

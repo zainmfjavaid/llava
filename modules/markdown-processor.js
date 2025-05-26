@@ -1,5 +1,5 @@
 // Function to process generated notes with markdown and custom tags
-export function processGeneratedNotes(notes) {
+export function processGeneratedNotes(notes, noteStorage = null) {
   // First, handle llava:userinsp tags
   let processedNotes = notes.replace(/<llava:userinsp>(.*?)<\/llava:userinsp>/gs, '<llava:userinsp>$1</llava:userinsp>');
   
@@ -10,6 +10,12 @@ export function processGeneratedNotes(notes) {
   
   // Convert markdown bold text
   processedNotes = processedNotes.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+  
+  // Convert note citations in brackets (any alphanumeric ID)
+  processedNotes = processedNotes.replace(/\[([0-9A-Za-z]+)\](?!\()/g, (match, noteId) => {
+    console.log('Found citation:', match, 'noteId:', noteId);
+    return `<span class="note-citation" data-note-id="${noteId}" onclick="openNote('${noteId}')">Loading...</span>`;
+  });
   
   // Convert markdown links
   processedNotes = processedNotes.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="external-link">$1</a>');

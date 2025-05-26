@@ -7,9 +7,17 @@ class SidebarManager {
     this.isCollapsed = false;
     this.notes = [];
     this.currentNoteId = null;
+    this.initialized = false;
   }
 
   async initialize() {
+    // Prevent multiple initializations
+    if (this.initialized) {
+      return;
+    }
+    this.initialized = true;
+    
+    // Load notes before setting up event listeners
     await this.loadNotes();
     this.setupEventListeners();
     this.setupFocusBlurLogic();
@@ -17,7 +25,6 @@ class SidebarManager {
   }
 
   setupEventListeners() {
-    // Sidebar toggle functionality for initial screen
     const sidebarToggleBtn = document.getElementById('sidebar-toggle');
     const sidebar = document.querySelector('.initial-screen .sidebar');
     
@@ -34,14 +41,18 @@ class SidebarManager {
           this.expandSidebar(sidebar, 'sidebar-toggle-shrink', 'sidebar-toggle-expand');
         }
       });
+    } else {
+      console.error('[SM] Initial screen sidebar or toggle button NOT FOUND.');
     }
+
+    // Also setup chat screen sidebar
+    this.setupChatScreenSidebar();
   }
 
   setupRecordingScreenSidebar() {
-    // Sidebar toggle functionality for recording screen
     const sidebarToggleBtnRecording = document.getElementById('sidebar-toggle-recording');
     const sidebarRecording = document.querySelector('.recording-screen .sidebar');
-    
+
     if (sidebarToggleBtnRecording && sidebarRecording) {
       sidebarToggleBtnRecording.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -55,40 +66,60 @@ class SidebarManager {
           this.expandSidebar(sidebarRecording, 'sidebar-toggle-shrink-recording', 'sidebar-toggle-expand-recording');
         }
       });
+    } else {
+      console.error('[SM] Recording screen sidebar or toggle button NOT FOUND.');
+    }
+  }
 
-      // Setup focus/blur for recording screen sidebar
-      sidebarRecording.addEventListener('mousedown', (e) => {
+  setupChatScreenSidebar() {
+    const sidebarToggleBtnChat = document.getElementById('sidebar-toggle-chat');
+    const sidebarChat = document.querySelector('.chat-screen .sidebar');
+
+    if (sidebarToggleBtnChat && sidebarChat) {
+      sidebarToggleBtnChat.addEventListener('click', (e) => {
         e.stopPropagation();
-        sidebarRecording.classList.add('focused');
+        this.toggleSidebar(sidebarChat, 'sidebar-toggle-shrink-chat', 'sidebar-toggle-expand-chat');
       });
 
-      document.addEventListener('mousedown', (e) => {
-        if (!sidebarRecording.contains(e.target)) {
-          sidebarRecording.classList.remove('focused');
+      // When sidebar is collapsed, allow click anywhere to expand
+      sidebarChat.addEventListener('click', (e) => {
+        if (sidebarChat.classList.contains('collapsed')) {
+          e.stopPropagation();
+          this.expandSidebar(sidebarChat, 'sidebar-toggle-shrink-chat', 'sidebar-toggle-expand-chat');
         }
       });
+    } else {
+      console.error('[SM] Chat screen sidebar or toggle button NOT FOUND.');
     }
   }
 
   setupFocusBlurLogic() {
-    const sidebar = document.querySelector('.sidebar');
-    if (!sidebar) return;
-
-    // Add focus on mousedown
-    sidebar.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      sidebar.classList.add('focused');
+    // Setup focus/blur logic for all sidebars
+    const sidebars = document.querySelectorAll('.sidebar');
+    
+    sidebars.forEach(sidebar => {
+      // Add focus on mousedown
+      sidebar.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        sidebar.classList.add('focused');
+      });
     });
 
-    // Remove focus when clicking outside
+    // Remove focus when clicking outside any sidebar
     document.addEventListener('mousedown', (e) => {
-      if (!sidebar.contains(e.target)) {
-        sidebar.classList.remove('focused');
-      }
+      sidebars.forEach(sidebar => {
+        if (!sidebar.contains(e.target)) {
+          sidebar.classList.remove('focused');
+        }
+      });
     });
   }
 
   toggleSidebar(sidebar, shrinkIconId, expandIconId) {
+    if (!sidebar) {
+      console.error('[SM] toggleSidebar: sidebar element is null!');
+      return;
+    }
     if (sidebar.classList.contains('collapsed')) {
       this.expandSidebar(sidebar, shrinkIconId, expandIconId);
     } else {
@@ -99,11 +130,9 @@ class SidebarManager {
   collapseSidebar(sidebar, shrinkIconId, expandIconId) {
     const shrinkIcon = document.getElementById(shrinkIconId);
     const expandIcon = document.getElementById(expandIconId);
-    
     if (sidebar && !sidebar.classList.contains('collapsed')) {
       sidebar.classList.add('collapsed');
       sidebar.classList.remove('focused');
-      
       if (shrinkIcon) shrinkIcon.style.display = 'none';
       if (expandIcon) expandIcon.style.display = 'block';
     }
@@ -112,10 +141,8 @@ class SidebarManager {
   expandSidebar(sidebar, shrinkIconId, expandIconId) {
     const shrinkIcon = document.getElementById(shrinkIconId);
     const expandIcon = document.getElementById(expandIconId);
-    
     if (sidebar && sidebar.classList.contains('collapsed')) {
       sidebar.classList.remove('collapsed');
-      
       if (shrinkIcon) shrinkIcon.style.display = 'block';
       if (expandIcon) expandIcon.style.display = 'none';
     }
@@ -273,6 +300,9 @@ class SidebarManager {
   }
 
   async selectNote(noteId) {
+    // If recording is active, stop it before loading a new note
+    const { getIsRecording, stopRecording } = await import('./recording-controls.js');
+    if (getIsRecording()) await stopRecording();
     try {
       // Clear active state from all items in both sidebars
       document.querySelectorAll('.note-item-sidebar').forEach(item => {
@@ -373,6 +403,9 @@ class SidebarManager {
         const notesWrapper = notesInput.parentNode;
         notesWrapper.replaceChild(notesDiv, notesInput);
         elements.notesInput = notesDiv;
+        
+        // Load note titles for citations
+        this.loadCitationTitles(notesDiv);
       }
       
       // Hide generate notes button
@@ -503,6 +536,22 @@ class SidebarManager {
     } catch (error) {
       console.error('Failed to delete note:', error);
       alert('Failed to delete note. Please try again.');
+    }
+  }
+
+  // Load citation titles for note references
+  async loadCitationTitles(container) {
+    const citations = container.querySelectorAll('.note-citation');
+    
+    for (const citation of citations) {
+      const noteId = citation.getAttribute('data-note-id');
+      try {
+        const referencedNote = await APIClient.getNote(noteId);
+        citation.textContent = referencedNote.title;
+      } catch (error) {
+        console.error(`Failed to load note ${noteId}:`, error);
+        citation.textContent = 'Note not found';
+      }
     }
   }
 }

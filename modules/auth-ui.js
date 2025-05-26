@@ -1,6 +1,6 @@
 // auth-ui.js - Authentication UI management
 import { authManager } from './auth-manager.js';
-import { initializeLandingPage, addBackToHomeButton } from './landing-page.js';
+import { initializeLandingPage, addBackToHomeButton, initializeSidebarHomeButtons } from './landing-page.js';
 
 export function initializeAuthUI() {
   const authScreen = document.getElementById('authScreen');
@@ -12,6 +12,8 @@ export function initializeAuthUI() {
   const authError = document.getElementById('authError');
   const emailInput = document.getElementById('emailInput');
   const passwordInput = document.getElementById('passwordInput');
+  const nameInput = document.getElementById('nameInput');
+  const nameGroup = document.getElementById('nameGroup');
   // const userEmail = document.getElementById('userEmail'); // Removed as home-header is gone
   // const logoutBtn = document.getElementById('logoutBtn'); // Removed as home-header is gone
 
@@ -44,7 +46,10 @@ export function initializeAuthUI() {
     
     // Initialize landing page functionality
     await initializeLandingPage();
+    initializeSidebarHomeButtons();
     addBackToHomeButton();
+    // Re-initialize all app modules now that the main UI is visible (fix auto-resize and event bindings)
+    if (window.initializeAppModules) window.initializeAppModules();
   }
 
   function clearError() {
@@ -63,10 +68,14 @@ export function initializeAuthUI() {
       loginTab.classList.add('active');
       signupTab.classList.remove('active');
       authBtn.textContent = 'Sign In';
+      nameGroup.classList.add('visually-hidden');
+      nameInput.required = false;
     } else {
       loginTab.classList.remove('active');
       signupTab.classList.add('active');
       authBtn.textContent = 'Sign Up';
+      nameGroup.classList.remove('visually-hidden');
+      nameInput.required = true;
     }
   }
 
@@ -84,6 +93,7 @@ export function initializeAuthUI() {
     e.preventDefault();
     const email = emailInput.value;
     const password = passwordInput.value;
+    const name = nameInput.value;
     authBtn.disabled = true;
     authBtn.textContent = isLoginMode ? 'Signing In...' : 'Signing Up...';
 
@@ -91,7 +101,7 @@ export function initializeAuthUI() {
       if (isLoginMode) {
         await authManager.login(email, password);
       } else {
-        await authManager.signup(email, password);
+        await authManager.register(name, email, password);
       }
       await showMainApp();
     } catch (error) {

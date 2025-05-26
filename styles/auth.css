@@ -17,10 +17,6 @@
     font-weight: 700;
     color: var(--text-dark-color);
     margin-bottom: 2rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
 }
 
 .auth-form {
@@ -78,7 +74,7 @@
 .auth-btn {
     width: 100%;
     padding: 1rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #7483f2;
     color: white;
     border: none;
     border-radius: 8px;
@@ -90,6 +86,7 @@
 }
 
 .auth-btn:hover:not(:disabled) {
+    background: #5a67d8;
     transform: translateY(-1px);
 }
 

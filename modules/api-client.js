@@ -141,4 +141,50 @@ export class APIClient {
 
     return response;
   }
+
+  // Chat/QA endpoints
+  static async sendChatMessage(question, chatHistory = []) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/qa-chat`, {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: user.id,
+        question,
+        chat_history: chatHistory,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to send chat message');
+    }
+
+    return await response.json();
+  }
+
+  static async sendChatMessageStream(question, chatHistory = []) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await fetch(`${API_BASE_URL}/qa-chat-stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        question,
+        chat_history: chatHistory,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to send chat message');
+    }
+
+    return response;
+  }
 }

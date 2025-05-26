@@ -37,14 +37,14 @@ class AuthManager {
     return this.currentUser;
   }
 
-  async register(email, password) {
+  async register(name, email, password) {
     try {
       const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       if (!response.ok) {

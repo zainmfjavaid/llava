@@ -14,6 +14,22 @@ let titleUpdateTimeout = null;
 let resizeTimeout = null;
 let notesGenerated = false; // Flag to track if AI notes have been generated
 
+// Load citation titles for note references
+async function loadCitationTitles(container) {
+  const citations = container.querySelectorAll('.note-citation');
+  
+  for (const citation of citations) {
+    const noteId = citation.getAttribute('data-note-id');
+    try {
+      const referencedNote = await APIClient.getNote(noteId);
+      citation.textContent = referencedNote.title;
+    } catch (error) {
+      console.error(`Failed to load note ${noteId}:`, error);
+      citation.textContent = 'Note not found';
+    }
+  }
+}
+
 // Auto-resize title input based on content
 function autoResizeTitleInput() {
   const titleInput = elements.titleInput;
@@ -228,6 +244,9 @@ export function createEditableNotesDiv(notes) {
       window.electronAPI.openExternal(link.href);
     });
   });
+  
+  // Load citation titles
+  loadCitationTitles(currentNotesDiv);
   
   // Ensure event listeners are added (they may already exist if it was initialized as editable)
   if (!currentNotesDiv.hasEventListener) {

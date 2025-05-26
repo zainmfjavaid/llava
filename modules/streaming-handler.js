@@ -4,6 +4,22 @@ import { APIClient } from './api-client.js';
 import { authManager } from './auth-manager.js';
 import { processGeneratedNotes } from './markdown-processor.js';
 
+// Load citation titles for note references
+async function loadCitationTitles(container) {
+  const citations = container.querySelectorAll('.note-citation');
+  
+  for (const citation of citations) {
+    const noteId = citation.getAttribute('data-note-id');
+    try {
+      const referencedNote = await APIClient.getNote(noteId);
+      citation.textContent = referencedNote.title;
+    } catch (error) {
+      console.error(`Failed to load note ${noteId}:`, error);
+      citation.textContent = 'Note not found';
+    }
+  }
+}
+
 // Initialize the notes area for streaming content
 export function initializeStreamingNotesArea() {
   // Ensure notes input is a contentEditable div
@@ -181,6 +197,9 @@ export async function finalizeStreamedContent(fullContent) {
       window.electronAPI.openExternal(link.href);
     });
   });
+  
+  // Load citation titles
+  await loadCitationTitles(elements.notesInput);
   
   // Ensure event listeners are added (import required functions)
   const { handleNotesInput, handleNotesKeydown } = await import('./notes-editor.js');
