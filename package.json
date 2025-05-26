@@ -51,7 +51,8 @@
       {
         "provider": "github",
         "owner": "zainmfjavaid",
-        "repo": "llava"
+        "repo": "llava",
+        "releaseType": "release"
       }
     ],
     "afterSign": "build/notarize.js",
