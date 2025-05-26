@@ -328,16 +328,58 @@ class SidebarManager {
   }
 
   async reconstructNoteView(note) {
-    // Hide landing page and show recording screen
+    // Smoothly transition from landing page to recording screen
     const initialScreen = document.getElementById('initialScreen');
     const recordingScreen = document.getElementById('recordingScreen');
     
-    if (initialScreen) initialScreen.style.display = 'none';
-    if (recordingScreen) recordingScreen.style.display = 'block';
+    // Smoothly collapse sidebar
+    const sidebar = document.querySelector('.initial-screen .sidebar, .recording-screen .sidebar');
+    if (sidebar && !sidebar.classList.contains('collapsed')) {
+      this.collapseSidebar(sidebar, 'sidebar-toggle-shrink', 'sidebar-toggle-expand');
+    }
+    
+    // Setup crossfade transition
+    if (initialScreen && recordingScreen) {
+      // Position recording screen on top with opacity 0
+      recordingScreen.style.position = 'absolute';
+      recordingScreen.style.top = '0';
+      recordingScreen.style.left = '0';
+      recordingScreen.style.width = '100%';
+      recordingScreen.style.height = '100%';
+      recordingScreen.style.zIndex = '10';
+      recordingScreen.style.display = 'flex';
+      recordingScreen.style.opacity = '0';
+      recordingScreen.style.transition = 'opacity 0.3s ease';
+      
+      // Fade out initial screen and fade in recording screen simultaneously
+      initialScreen.style.transition = 'opacity 0.3s ease';
+      initialScreen.style.opacity = '0';
+      
+      setTimeout(() => {
+        recordingScreen.style.opacity = '1';
+      }, 50);
+      
+      // Clean up after transition
+      setTimeout(() => {
+        initialScreen.style.display = 'none';
+        recordingScreen.style.position = '';
+        recordingScreen.style.top = '';
+        recordingScreen.style.left = '';
+        recordingScreen.style.width = '';
+        recordingScreen.style.height = '';
+        recordingScreen.style.zIndex = '';
+        recordingScreen.style.transition = '';
+        recordingScreen.style.opacity = '';
+        initialScreen.style.transition = '';
+        initialScreen.style.opacity = '';
+      }, 350);
+    }
 
-    // Update home button states
-    const { updateHomeButtonStates } = await import('./landing-page.js');
-    updateHomeButtonStates();
+    // Update home button states after transition
+    setTimeout(async () => {
+      const { updateHomeButtonStates } = await import('./landing-page.js');
+      updateHomeButtonStates();
+    }, 200);
 
     // Import required modules
     const { setCurrentNoteId } = await import('./notes-processor.js');

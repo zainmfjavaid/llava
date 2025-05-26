@@ -8,6 +8,7 @@
     z-index: 1;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    transition: opacity 0.3s ease;
 }
 
 .recording-screen::-webkit-scrollbar {

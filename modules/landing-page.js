@@ -32,18 +32,8 @@ export function addBackToHomeButton() {
     // If recording is active, stop it before navigating home
     const { getIsRecording, stopRecording } = await import('./recording-controls.js');
     if (getIsRecording()) await stopRecording();
-    const initialScreen = document.getElementById('initialScreen');
-    const recordingScreen = document.getElementById('recordingScreen');
     
-    if (initialScreen) initialScreen.style.display = 'flex';
-    if (recordingScreen) recordingScreen.style.display = 'none';
-    
-    // Refresh notes in sidebar
-    await sidebarManager.refreshNotes();
-    
-    // Clear current note data
-    window.currentNoteId = null;
-    window.currentNote = null;
+    await smoothNavigateHome();
   });
   
   // Add button to the top of the recording screen
@@ -54,6 +44,75 @@ export function addBackToHomeButton() {
 }
 
 // Add Home button functionality to sidebar
+// Smooth navigation to home function
+export async function smoothNavigateHome() {
+  const initialScreen = document.getElementById('initialScreen');
+  const recordingScreen = document.getElementById('recordingScreen');
+  const chatScreen = document.getElementById('chatScreen');
+  
+  // Expand sidebar smoothly
+  const sidebar = document.querySelector('.recording-screen .sidebar, .chat-screen .sidebar, .initial-screen .sidebar');
+  if (sidebar && sidebar.classList.contains('collapsed')) {
+    sidebarManager.expandSidebar(sidebar, 'sidebar-toggle-shrink', 'sidebar-toggle-expand');
+  }
+  
+  // Setup crossfade transition back to home
+  const currentScreen = recordingScreen && recordingScreen.style.display !== 'none' ? recordingScreen : 
+                       chatScreen && chatScreen.style.display !== 'none' ? chatScreen : null;
+  
+  if (currentScreen && initialScreen) {
+    // Position initial screen on top with opacity 0
+    initialScreen.style.position = 'absolute';
+    initialScreen.style.top = '0';
+    initialScreen.style.left = '0';
+    initialScreen.style.width = '100%';
+    initialScreen.style.height = '100%';
+    initialScreen.style.zIndex = '10';
+    initialScreen.style.display = 'flex';
+    initialScreen.style.opacity = '0';
+    initialScreen.style.transition = 'opacity 0.3s ease';
+    
+    // Fade out current screen and fade in initial screen simultaneously
+    currentScreen.style.transition = 'opacity 0.3s ease';
+    currentScreen.style.opacity = '0';
+    
+    setTimeout(() => {
+      initialScreen.style.opacity = '1';
+    }, 50);
+    
+    // Clean up after transition
+    setTimeout(() => {
+      currentScreen.style.display = 'none';
+      initialScreen.style.position = '';
+      initialScreen.style.top = '';
+      initialScreen.style.left = '';
+      initialScreen.style.width = '';
+      initialScreen.style.height = '';
+      initialScreen.style.zIndex = '';
+      initialScreen.style.transition = '';
+      initialScreen.style.opacity = '';
+      currentScreen.style.transition = '';
+      currentScreen.style.opacity = '';
+    }, 350);
+  }
+  
+  // Update Home button active states after transition
+  setTimeout(() => {
+    updateHomeButtonStates();
+  }, 200);
+  
+  // Refresh notes in sidebar
+  setTimeout(async () => {
+    await sidebarManager.refreshNotes();
+  }, 150);
+  
+  // Clear current note data
+  window.currentNoteId = null;
+  window.currentNote = null;
+  // Clear any existing chat history when returning home
+  chatManager.clearChat();
+}
+
 export function initializeSidebarHomeButtons() {
   const homeBtn = document.getElementById('homeBtn');
   const homeBtnRecording = document.getElementById('homeBtnRecording');
@@ -66,26 +125,8 @@ export function initializeSidebarHomeButtons() {
     // If recording is active, stop it before navigating home
     const { getIsRecording, stopRecording } = await import('./recording-controls.js');
     if (getIsRecording()) await stopRecording();
-    const initialScreen = document.getElementById('initialScreen');
-    const recordingScreen = document.getElementById('recordingScreen');
-    const chatScreen = document.getElementById('chatScreen');
     
-    if (initialScreen) initialScreen.style.display = 'flex';
-    if (recordingScreen) recordingScreen.style.display = 'none';
-    if (chatScreen) chatScreen.style.display = 'none';
-    
-    // Update Home button active states
-    updateHomeButtonStates();
-    
-    // Refresh notes in sidebar
-    const { sidebarManager } = await import('./sidebar-manager.js');
-    await sidebarManager.refreshNotes();
-    
-    // Clear current note data
-    window.currentNoteId = null;
-    window.currentNote = null;
-    // Clear any existing chat history when returning home
-    chatManager.clearChat();
+    await smoothNavigateHome();
   };
   
   // Add click listeners

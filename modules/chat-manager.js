@@ -84,12 +84,53 @@ class ChatManager {
     const question = this.chatInput.value.trim();
     if (!question) return;
 
-    // Hide home screen, show chat screen
+    // Smoothly transition to chat screen
     const initialScreen = document.getElementById('initialScreen');
     const chatScreen = document.getElementById('chatScreen');
     
-    if (initialScreen) initialScreen.style.display = 'none';
-    if (chatScreen) chatScreen.style.display = 'flex';
+    // Smoothly collapse sidebar
+    const sidebar = document.querySelector('.initial-screen .sidebar');
+    if (sidebar && !sidebar.classList.contains('collapsed')) {
+      const { sidebarManager } = await import('./sidebar-manager.js');
+      sidebarManager.collapseSidebar(sidebar, 'sidebar-toggle-shrink', 'sidebar-toggle-expand');
+    }
+    
+    // Setup crossfade transition
+    if (initialScreen && chatScreen) {
+      // Position chat screen on top with opacity 0
+      chatScreen.style.position = 'absolute';
+      chatScreen.style.top = '0';
+      chatScreen.style.left = '0';
+      chatScreen.style.width = '100%';
+      chatScreen.style.height = '100%';
+      chatScreen.style.zIndex = '10';
+      chatScreen.style.display = 'flex';
+      chatScreen.style.opacity = '0';
+      chatScreen.style.transition = 'opacity 0.3s ease';
+      
+      // Fade out initial screen and fade in chat screen simultaneously
+      initialScreen.style.transition = 'opacity 0.3s ease';
+      initialScreen.style.opacity = '0';
+      
+      setTimeout(() => {
+        chatScreen.style.opacity = '1';
+      }, 50);
+      
+      // Clean up after transition
+      setTimeout(() => {
+        initialScreen.style.display = 'none';
+        chatScreen.style.position = '';
+        chatScreen.style.top = '';
+        chatScreen.style.left = '';
+        chatScreen.style.width = '';
+        chatScreen.style.height = '';
+        chatScreen.style.zIndex = '';
+        chatScreen.style.transition = '';
+        chatScreen.style.opacity = '';
+        initialScreen.style.transition = '';
+        initialScreen.style.opacity = '';
+      }, 350);
+    }
 
     // Initialize fullscreen chat interface first
     await this.initializeFullscreenChat();
@@ -387,13 +428,13 @@ class ChatManager {
     }
   }
 
-  exitChatScreen() {
-    // Hide chat screen, show home screen
+  async exitChatScreen() {
     const initialScreen = document.getElementById('initialScreen');
     const chatScreen = document.getElementById('chatScreen');
     
-    if (initialScreen) initialScreen.style.display = 'flex';
-    if (chatScreen) chatScreen.style.display = 'none';
+    // Use the smooth navigation function from landing-page
+    const { smoothNavigateHome } = await import('./landing-page.js');
+    await smoothNavigateHome();
     
     // Reset fullscreen state
     this.isFullscreen = false;

@@ -86,16 +86,60 @@ export async function startRecording() {
     
     await window.electronAPI.startTranscription();
     
-    // Switch to recording screen
-    elements.initialScreen.style.display = 'none';
-    elements.recordingScreen.style.display = 'block';
+    // Smoothly transition to recording screen
+    // Smoothly collapse sidebar
+    const sidebar = document.querySelector('.initial-screen .sidebar');
+    if (sidebar && !sidebar.classList.contains('collapsed')) {
+      const { sidebarManager } = await import('./sidebar-manager.js');
+      sidebarManager.collapseSidebar(sidebar, 'sidebar-toggle-shrink', 'sidebar-toggle-expand');
+    }
     
-    // Auto-resize title textarea as soon as recording screen is shown
-    autoResizeTitle();
+    // Setup crossfade transition
+    if (elements.initialScreen && elements.recordingScreen) {
+      // Position recording screen on top with opacity 0
+      elements.recordingScreen.style.position = 'absolute';
+      elements.recordingScreen.style.top = '0';
+      elements.recordingScreen.style.left = '0';
+      elements.recordingScreen.style.width = '100%';
+      elements.recordingScreen.style.height = '100%';
+      elements.recordingScreen.style.zIndex = '10';
+      elements.recordingScreen.style.display = 'block';
+      elements.recordingScreen.style.opacity = '0';
+      elements.recordingScreen.style.transition = 'opacity 0.3s ease';
+      
+      // Fade out initial screen and fade in recording screen simultaneously
+      elements.initialScreen.style.transition = 'opacity 0.3s ease';
+      elements.initialScreen.style.opacity = '0';
+      
+      setTimeout(() => {
+        elements.recordingScreen.style.opacity = '1';
+      }, 50);
+      
+      // Clean up after transition
+      setTimeout(() => {
+        elements.initialScreen.style.display = 'none';
+        elements.recordingScreen.style.position = '';
+        elements.recordingScreen.style.top = '';
+        elements.recordingScreen.style.left = '';
+        elements.recordingScreen.style.width = '';
+        elements.recordingScreen.style.height = '';
+        elements.recordingScreen.style.zIndex = '';
+        elements.recordingScreen.style.transition = '';
+        elements.recordingScreen.style.opacity = '';
+        elements.initialScreen.style.transition = '';
+        elements.initialScreen.style.opacity = '';
+      }, 350);
+    }
     
-    // Update home button states
-    const { updateHomeButtonStates } = await import('./landing-page.js');
-    updateHomeButtonStates();
+    // Auto-resize title textarea and update home button states after transition
+    setTimeout(() => {
+      autoResizeTitle();
+    }, 200);
+    
+    setTimeout(async () => {
+      const { updateHomeButtonStates } = await import('./landing-page.js');
+      updateHomeButtonStates();
+    }, 200);
     
     isRecording = true;
     

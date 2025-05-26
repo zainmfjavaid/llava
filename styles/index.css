@@ -131,6 +131,7 @@ body::before {
     display: flex;
     flex-direction: column;
     height: 100%;
+    transition: opacity 0.3s ease;
 }
 
 .home-content {
@@ -881,5 +882,11 @@ textarea.chat {
 .sidebar.collapsed .sidebar-signout-btn,
 .sidebar.collapsed .sidebar-signout-divider {
     display: none;
+}
+
+/* Global highlight for selected text */
+::selection {
+    background: rgba(116, 131, 242, 0.85); /* #7483f2 at 85% opacity */
+    color: var(--text-light-color);
 }
 

@@ -11,6 +11,7 @@
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    transition: opacity 0.3s ease;
 }
 
 .chat-screen::-webkit-scrollbar {
