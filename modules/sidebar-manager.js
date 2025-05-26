@@ -1,6 +1,9 @@
 // sidebar-manager.js - Sidebar functionality for notes navigation
 import { APIClient } from './api-client.js';
 import { authManager } from './auth-manager.js';
+import { setTranscript } from './transcript-handler.js';
+import { clearTranscript } from './transcript-handler.js';
+import { resetNotesGenerationState } from './notes-processor.js';
 
 class SidebarManager {
   constructor() {
@@ -422,10 +425,8 @@ class SidebarManager {
       autoResizeTitle();
     }
 
-    // Set transcript content
-    if (transcriptContent) {
-      transcriptContent.textContent = note.transcript;
-    }
+    // Set transcript content using the proper function
+    setTranscript(note.transcript);
 
     // Make sure audio monitoring is stopped during reconstruction
     const { stopAudioMonitoring } = await import('./audio-monitor.js');
@@ -557,6 +558,12 @@ class SidebarManager {
         this.currentNoteId = null;
         window.currentNoteId = null;
         window.currentNote = null;
+        
+        // Clear transcript data when deleting active note
+        clearTranscript();
+        
+        // Reset notes generation state when deleting active note
+        resetNotesGenerationState();
         
         // Navigate back to home screen if this was the active note
         const initialScreen = document.getElementById('initialScreen');

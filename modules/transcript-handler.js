@@ -141,6 +141,14 @@ export function getCurrentTranscript() {
   return currentTranscript;
 }
 
+// Set transcript content (for viewing existing notes)
+export function setTranscript(transcript) {
+  currentTranscript = transcript || '';
+  elements.transcriptContent.textContent = currentTranscript;
+  lastSpeaker = null;
+  lastEndTime = 0;
+}
+
 // Initialize transcript event listeners
 export function initializeTranscriptListeners() {
   elements.transcriptContent.addEventListener('scroll', handleTranscriptScroll);

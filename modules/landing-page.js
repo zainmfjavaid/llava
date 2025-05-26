@@ -3,6 +3,8 @@ import { APIClient } from './api-client.js';
 import { authManager } from './auth-manager.js';
 import { sidebarManager } from './sidebar-manager.js';
 import { chatManager } from './chat-manager.js';
+import { clearTranscript } from './transcript-handler.js';
+import { resetNotesGenerationState } from './notes-processor.js';
 
 export async function initializeLandingPage() {
   // Initialize chat functionality
@@ -106,9 +108,11 @@ export async function smoothNavigateHome() {
     await sidebarManager.refreshNotes();
   }, 150);
   
-  // Clear current note data
+  // Clear current note data and transcript
   window.currentNoteId = null;
   window.currentNote = null;
+  clearTranscript(); // Clear transcript data when navigating home
+  resetNotesGenerationState(); // Reset notes generation state when navigating home
   // Clear any existing chat history when returning home
   chatManager.clearChat();
 }

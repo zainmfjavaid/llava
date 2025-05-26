@@ -77,6 +77,21 @@ export function getCurrentNoteId() {
   return currentNoteId;
 }
 
+// Reset notes generation state (for new recording sessions)
+export function resetNotesGenerationState() {
+  notesGenerated = false;
+  currentNoteId = null;
+  
+  // Reset generate notes button state
+  if (elements.generateNotesBtn) {
+    const buttonText = elements.generateNotesBtn.querySelector('svg').nextSibling;
+    if (buttonText) {
+      buttonText.textContent = ' Generate notes';
+    }
+    elements.generateNotesBtn.disabled = false;
+  }
+}
+
 // Helper function to extract raw notes with line breaks preserved
 function extractRawNotes() {
   if (elements.notesInput.tagName === 'TEXTAREA') {

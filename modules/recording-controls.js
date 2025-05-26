@@ -1,7 +1,7 @@
 import { elements, isTitleEmpty, autoResizeTitle, startWaveAnimations, stopWaveAnimations, updateSeparatorVisibility } from './dom-utils.js';
-import { generateTitle, setCurrentNoteId } from './notes-processor.js';
+import { generateTitle, setCurrentNoteId, resetNotesGenerationState } from './notes-processor.js';
 import { startAudioMonitoring, stopAudioMonitoring, loadAudioDeviceWithPermission } from './audio-monitor.js';
-import { getCurrentTranscript } from './transcript-handler.js';
+import { getCurrentTranscript, clearTranscript } from './transcript-handler.js';
 import { APIClient } from './api-client.js';
 import { authManager } from './auth-manager.js';
 import { noteStorage } from './note-storage.js';
@@ -55,8 +55,12 @@ function clearRecordingSession() {
     notesInput.value = '';
   }
   
-  // Clear transcript content
+  // Clear transcript content and transcript data
   elements.transcriptContent.textContent = '';
+  clearTranscript(); // Clear the transcript data variable
+  
+  // Reset notes generation state
+  resetNotesGenerationState();
   
   // Remove any existing resume text
   const existingResumeText = document.querySelector('.resume-text');
