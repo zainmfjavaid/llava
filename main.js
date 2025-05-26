@@ -9,7 +9,8 @@ require('dotenv').config({
     : path.join(__dirname, '.env')
 });
 // Add auto-update support via GitHub releases
-require('update-electron-app')({
+const { updateElectronApp } = require('update-electron-app');
+updateElectronApp({
   repo: 'zainmfjavaid/llava',
   updateInterval: '1 hour'
 });

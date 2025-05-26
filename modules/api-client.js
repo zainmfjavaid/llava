@@ -1,7 +1,11 @@
 // api-client.js - API client for backend communication
 import { authManager, authenticatedFetch } from './auth-manager.js';
 
-const API_BASE_URL = 'http://localhost:9000';
+// Toggle production vs development API endpoint
+const is_production = false; // set to true in production builds
+const API_BASE_URL = is_production
+  ? 'https://api.llava.io/v1'
+  : 'http://localhost:9000/v1';
 
 export class APIClient {
   // Notes CRUD operations

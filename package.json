@@ -6,6 +6,7 @@
   "author": "llava",
   "main": "main.js",
   "scripts": {
+    "start": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "dist:mac": "electron-builder --mac",
@@ -58,6 +59,9 @@
     ]
   },
   "dependencies": {
+    "@deepgram/sdk": "^4.2.0",
+    "dotenv": "^16.5.0",
+    "ffmpeg-static": "^5.2.0",
     "update-electron-app": "^3.1.1"
   }
 }
