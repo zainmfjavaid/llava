@@ -1,12 +1,18 @@
 // main.js
-require('dotenv').config();
+// Initialize Electron modules and load environment variables
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const path = require('path');
+// Load environment variables from .env (packaged vs dev)
+require('dotenv').config({
+  path: app.isPackaged
+    ? path.join(process.resourcesPath, '.env')
+    : path.join(__dirname, '.env')
+});
 // Add auto-update support via GitHub releases
 require('update-electron-app')({
   repo: 'zainmfjavaid/llava',
   updateInterval: '1 hour'
 });
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
-const path = require('path');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 const { createClient, LiveTranscriptionEvents } = require('@deepgram/sdk');

@@ -52,7 +52,10 @@
         "repo": "llava"
       }
     ],
-    "afterSign": "build/notarize.js"
+    "afterSign": "build/notarize.js",
+    "extraResources": [
+      ".env"
+    ]
   },
   "dependencies": {
     "update-electron-app": "^3.1.1"
