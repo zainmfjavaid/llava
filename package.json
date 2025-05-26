@@ -9,8 +9,9 @@
     "start": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win --x64"
+    "dist:mac": "electron-builder --mac --publish always",
+    "dist:win": "electron-builder --win --x64 --publish always",
+    "release": "npm run dist:mac && npm run dist:win"
   },
   "devDependencies": {
     "@electron/notarize": "^3.0.1",

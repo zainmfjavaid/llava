@@ -180,13 +180,10 @@
 }
 
 .note-title-sidebar {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-    -webkit-box-orient: vertical;
+    /* single-line truncate with ellipsis, allow mid-word truncation */
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: normal;
+    white-space: nowrap;
     flex: 1;
     min-width: 0;
     width: 100%;
