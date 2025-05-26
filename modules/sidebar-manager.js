@@ -17,11 +17,34 @@ class SidebarManager {
     }
     this.initialized = true;
     
+    // Restore sidebar state for all screens
+    this.restoreSidebarState();
     // Load notes before setting up event listeners
     await this.loadNotes();
     this.setupEventListeners();
     this.setupFocusBlurLogic();
     this.setupRecordingScreenSidebar();
+  }
+
+  restoreSidebarState() {
+    // Initial screen
+    const sidebar = document.querySelector('.initial-screen .sidebar');
+    if (sidebar) {
+      const collapsed = localStorage.getItem('sidebar-collapsed-initial') === 'true';
+      sidebar.classList.toggle('collapsed', collapsed);
+    }
+    // Recording screen
+    const sidebarRecording = document.querySelector('.recording-screen .sidebar');
+    if (sidebarRecording) {
+      const collapsed = localStorage.getItem('sidebar-collapsed-recording') === 'true';
+      sidebarRecording.classList.toggle('collapsed', collapsed);
+    }
+    // Chat screen
+    const sidebarChat = document.querySelector('.chat-screen .sidebar');
+    if (sidebarChat) {
+      const collapsed = localStorage.getItem('sidebar-collapsed-chat') === 'true';
+      sidebarChat.classList.toggle('collapsed', collapsed);
+    }
   }
 
   setupEventListeners() {
@@ -135,6 +158,7 @@ class SidebarManager {
       sidebar.classList.remove('focused');
       if (shrinkIcon) shrinkIcon.style.display = 'none';
       if (expandIcon) expandIcon.style.display = 'block';
+      this.saveSidebarState(sidebar, true);
     }
   }
 
@@ -145,6 +169,26 @@ class SidebarManager {
       sidebar.classList.remove('collapsed');
       if (shrinkIcon) shrinkIcon.style.display = 'block';
       if (expandIcon) expandIcon.style.display = 'none';
+      this.saveSidebarState(sidebar, false);
+    }
+  }
+
+  saveSidebarState(sidebar, collapsed) {
+    if (sidebar.classList.contains('initial-screen')) {
+      localStorage.setItem('sidebar-collapsed-initial', collapsed);
+    } else if (sidebar.classList.contains('recording-screen')) {
+      localStorage.setItem('sidebar-collapsed-recording', collapsed);
+    } else if (sidebar.classList.contains('chat-screen')) {
+      localStorage.setItem('sidebar-collapsed-chat', collapsed);
+    } else {
+      // fallback: check parent nodes
+      if (sidebar.closest('.initial-screen')) {
+        localStorage.setItem('sidebar-collapsed-initial', collapsed);
+      } else if (sidebar.closest('.recording-screen')) {
+        localStorage.setItem('sidebar-collapsed-recording', collapsed);
+      } else if (sidebar.closest('.chat-screen')) {
+        localStorage.setItem('sidebar-collapsed-chat', collapsed);
+      }
     }
   }
 
@@ -328,58 +372,16 @@ class SidebarManager {
   }
 
   async reconstructNoteView(note) {
-    // Smoothly transition from landing page to recording screen
+    // Hide landing page and show recording screen
     const initialScreen = document.getElementById('initialScreen');
     const recordingScreen = document.getElementById('recordingScreen');
     
-    // Smoothly collapse sidebar
-    const sidebar = document.querySelector('.initial-screen .sidebar, .recording-screen .sidebar');
-    if (sidebar && !sidebar.classList.contains('collapsed')) {
-      this.collapseSidebar(sidebar, 'sidebar-toggle-shrink', 'sidebar-toggle-expand');
-    }
-    
-    // Setup crossfade transition
-    if (initialScreen && recordingScreen) {
-      // Position recording screen on top with opacity 0
-      recordingScreen.style.position = 'absolute';
-      recordingScreen.style.top = '0';
-      recordingScreen.style.left = '0';
-      recordingScreen.style.width = '100%';
-      recordingScreen.style.height = '100%';
-      recordingScreen.style.zIndex = '10';
-      recordingScreen.style.display = 'flex';
-      recordingScreen.style.opacity = '0';
-      recordingScreen.style.transition = 'opacity 0.3s ease';
-      
-      // Fade out initial screen and fade in recording screen simultaneously
-      initialScreen.style.transition = 'opacity 0.3s ease';
-      initialScreen.style.opacity = '0';
-      
-      setTimeout(() => {
-        recordingScreen.style.opacity = '1';
-      }, 50);
-      
-      // Clean up after transition
-      setTimeout(() => {
-        initialScreen.style.display = 'none';
-        recordingScreen.style.position = '';
-        recordingScreen.style.top = '';
-        recordingScreen.style.left = '';
-        recordingScreen.style.width = '';
-        recordingScreen.style.height = '';
-        recordingScreen.style.zIndex = '';
-        recordingScreen.style.transition = '';
-        recordingScreen.style.opacity = '';
-        initialScreen.style.transition = '';
-        initialScreen.style.opacity = '';
-      }, 350);
-    }
+    if (initialScreen) initialScreen.style.display = 'none';
+    if (recordingScreen) recordingScreen.style.display = 'block';
 
-    // Update home button states after transition
-    setTimeout(async () => {
-      const { updateHomeButtonStates } = await import('./landing-page.js');
-      updateHomeButtonStates();
-    }, 200);
+    // Update home button states
+    const { updateHomeButtonStates } = await import('./landing-page.js');
+    updateHomeButtonStates();
 
     // Import required modules
     const { setCurrentNoteId } = await import('./notes-processor.js');
