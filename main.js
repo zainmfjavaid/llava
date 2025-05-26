@@ -1,7 +1,10 @@
 // main.js
 require('dotenv').config();
-// Add auto-update support via update.electronjs.org
-require('update-electron-app')();
+// Add auto-update support via GitHub releases
+require('update-electron-app')({
+  repo: 'zainmfjavaid/llava',
+  updateInterval: '1 hour'
+});
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');

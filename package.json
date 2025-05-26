@@ -2,12 +2,17 @@
   "name": "llava",
   "productName": "llava",
   "version": "1.0.0",
+  "description": "AI Meeting Notes",
+  "author": "llava",
   "main": "main.js",
   "scripts": {
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win --x64"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.0.1",
     "electron": "^28.1.0",
     "electron-builder": "^26.0.12"
   },
@@ -15,9 +20,12 @@
     "appId": "com.llava.app",
     "productName": "llava",
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.productivity",
-      "icon": "assets/images/icon.icns",
+      "icon": "images/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
@@ -30,6 +38,23 @@
         "height": 550
       }
     },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "images/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "zainmfjavaid",
+        "repo": "llava"
+      }
+    ],
     "afterSign": "build/notarize.js"
+  },
+  "dependencies": {
+    "update-electron-app": "^3.1.1"
   }
 }
