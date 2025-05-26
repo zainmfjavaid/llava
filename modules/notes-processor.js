@@ -13,6 +13,7 @@ let notesUpdateTimeout = null;
 let titleUpdateTimeout = null;
 let resizeTimeout = null;
 let notesGenerated = false; // Flag to track if AI notes have been generated
+let isGeneratingNotes = false; // Flag to prevent title override during notes generation
 
 // Load citation titles for note references
 async function loadCitationTitles(container) {
@@ -80,6 +81,7 @@ export function getCurrentNoteId() {
 // Reset notes generation state (for new recording sessions)
 export function resetNotesGenerationState() {
   notesGenerated = false;
+  isGeneratingNotes = false; // Clear the generation flag
   currentNoteId = null;
   
   // Reset generate notes button state
@@ -152,6 +154,12 @@ function debouncedUpdateTitle() {
   }
   
   titleUpdateTimeout = setTimeout(async () => {
+    // Skip title update if we're currently generating notes to prevent override
+    if (isGeneratingNotes) {
+      console.log('Skipping title update during notes generation');
+      return;
+    }
+    
     if (currentNoteId && authManager.isAuthenticated()) {
       try {
         const updateData = {
@@ -283,6 +291,9 @@ export async function generateNotes() {
     return;
   }
   
+  // Set flag to prevent title override during notes generation
+  isGeneratingNotes = true;
+  
   // Show loading state
   const originalText = elements.generateNotesBtn.querySelector('svg').nextSibling.textContent.trim();
   elements.generateNotesBtn.querySelector('svg').nextSibling.textContent = ' Generating...';
@@ -328,6 +339,9 @@ export async function generateNotes() {
       resumeText.style.visibility = 'visible';
       resumeText.style.pointerEvents = 'auto';
     }
+  } finally {
+    // Clear flag to allow title updates again
+    isGeneratingNotes = false;
   }
 }
 
