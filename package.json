@@ -1,7 +1,7 @@
 {
   "name": "llava",
   "productName": "llava",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "AI Meeting Notes",
   "author": "llava",
   "main": "main.js",
@@ -31,7 +31,11 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "This app needs microphone access to transcribe your meetings and conversations.",
+        "NSSystemAdministrationUsageDescription": "This app needs system audio access to capture audio from your computer for transcription."
+      }
     },
     "dmg": {
       "background": "images/blue_noise.jpg",
@@ -57,7 +61,11 @@
     ],
     "afterSign": "build/notarize.js",
     "extraResources": [
-      ".env"
+      ".env",
+      {
+        "from": "node_modules/ffmpeg-static/ffmpeg",
+        "to": "ffmpeg"
+      }
     ]
   },
   "dependencies": {

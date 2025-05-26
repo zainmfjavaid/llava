@@ -30,6 +30,27 @@ export function initializeAuthUI() {
   }
   async function requestMicPermission() {
     try {
+      // First check if we already have permission
+      if (window.electronAPI && window.electronAPI.checkMicrophonePermission) {
+        const status = await window.electronAPI.checkMicrophonePermission();
+        if (status === 'granted') {
+          micGranted = true;
+          micPermBtn.textContent = 'Enabled';
+          micPermBtn.disabled = true;
+          updateContinueState();
+          return;
+        }
+      }
+      
+      // Request system-level permission first (macOS)
+      if (window.electronAPI && window.electronAPI.requestMicrophonePermission) {
+        const granted = await window.electronAPI.requestMicrophonePermission();
+        if (!granted) {
+          throw new Error('System microphone permission denied');
+        }
+      }
+      
+      // Then request web API permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micGranted = true;
       micPermBtn.textContent = 'Enabled';
@@ -38,27 +59,61 @@ export function initializeAuthUI() {
       // Stop tracks
       stream.getTracks().forEach(track => track.stop());
     } catch (err) {
+      console.error('Microphone permission error:', err);
       alert('Microphone permission denied.');
     }
   }
   async function requestSysAudioPermission() {
-    // Attempt to start and immediately stop IPC-based audio monitoring
-    if (window.electronAPI && window.electronAPI.startAudioMonitoring && window.electronAPI.stopAudioMonitoring) {
-      await window.electronAPI.startAudioMonitoring();
-      // Small delay to give FFmpeg time to initialise
-      setTimeout(() => {
-        window.electronAPI.stopAudioMonitoring();
-      }, 500);
-      sysAudioGranted = true;
-      sysAudioPermBtn.textContent = 'Enabled';
-      sysAudioPermBtn.disabled = true;
-      updateContinueState();
-    } else {
-      // Fallback – assume granted since Electron main handles capture directly
-      sysAudioGranted = true;
-      sysAudioPermBtn.textContent = 'Enabled';
-      sysAudioPermBtn.disabled = true;
-      updateContinueState();
+    try {
+      // Attempt to trigger system audio permission by starting audio monitoring
+      // This will cause macOS to show the permission dialog
+      if (window.electronAPI && window.electronAPI.startAudioMonitoring) {
+        // Set up error listener first
+        const errorHandler = (error) => {
+          console.error('Audio monitoring error:', error);
+          if (error.includes('Permission denied') || error.includes('Operation not permitted')) {
+            showPermissionInstructions();
+          }
+        };
+        
+        if (window.electronAPI.onAudioMonitoringError) {
+          window.electronAPI.onAudioMonitoringError(errorHandler);
+        }
+        
+        try {
+          await window.electronAPI.startAudioMonitoring();
+          
+          // Wait a moment to see if it works
+          setTimeout(async () => {
+            await window.electronAPI.stopAudioMonitoring();
+            sysAudioGranted = true;
+            sysAudioPermBtn.textContent = 'Enabled';
+            sysAudioPermBtn.disabled = true;
+            updateContinueState();
+          }, 1000);
+        } catch (monitorError) {
+          // If monitoring fails, show manual instructions
+          showPermissionInstructions();
+        }
+      } else {
+        throw new Error('Audio monitoring API not available');
+      }
+    } catch (error) {
+      console.error('System audio permission error:', error);
+      showPermissionInstructions();
+    }
+  }
+  function showPermissionInstructions() {
+    const userChoice = confirm(
+      'System audio permission is required for transcription.\n\n' +
+      'Click OK to open Privacy Settings where you can:\n' +
+      '1. Go to Privacy & Security > Microphone\n' +
+      '2. Enable this app for microphone access\n\n' +
+      'Then come back and try again.'
+    );
+    
+    if (userChoice && window.electronAPI && window.electronAPI.openPrivacySettings) {
+      window.electronAPI.openPrivacySettings();
     }
   }
   function hidePermissionScreen() {
