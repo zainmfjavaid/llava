@@ -1,7 +1,7 @@
 {
   "name": "llava",
   "productName": "llava",
-  "version": "1.0.4",
+  "version": "1.0.54",
   "description": "AI Meeting Notes",
   "author": "llava",
   "main": "main.js",
@@ -63,8 +63,11 @@
     "extraResources": [
       ".env",
       {
-        "from": "node_modules/ffmpeg-static/ffmpeg",
-        "to": "ffmpeg"
+        "from": "node_modules/ffmpeg-static/",
+        "to": ".",
+        "filter": [
+          "ffmpeg.exe"
+        ]
       }
     ]
   },

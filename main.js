@@ -1,3 +1,4 @@
+console.log('[Main] main.js script started execution.');
 // main.js
 // Initialize Electron modules and load environment variables
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
@@ -77,7 +78,9 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.handle('start-transcription', async (event) => {
+  console.log('[Main] Received start-transcription IPC call.');
   if (audioRecordingProcess || transcriptionConnection) {
+    console.warn('[Main] Start transcription called but already in progress or connection exists.');
     return;
   }
 
@@ -126,7 +129,10 @@ ipcMain.handle('start-transcription', async (event) => {
     if (process.platform === 'darwin') {
       args.push('-f', 'avfoundation', '-i', ':0', '-vn');
     } else if (process.platform === 'win32') {
-      args.push('-f', 'dshow', '-i', 'audio=Stereo Mix');
+      // Dynamically detect the default DirectShow audio device
+      const deviceName = await getDefaultDshowAudioDevice();
+      console.log(`[Main] Using Windows audio device: ${deviceName}`);
+      args.push('-f', 'dshow', '-i', `audio=${deviceName}`);
     } else {
       args.push('-f', 'pulse', '-i', 'default');
     }
@@ -411,4 +417,25 @@ ipcMain.handle('request-microphone-permission', async () => {
   }
   // On other platforms, assume granted
   return true;
-}); 
+});
+
+// Helper: Detect first available DirectShow audio device name on Windows
+async function getDefaultDshowAudioDevice() {
+  return new Promise((resolve) => {
+    // Build ffmpeg enumeration command
+    const ffmpegCmd = `"${ffmpegPath}" -list_devices true -f dshow -i dummy`;
+    exec(ffmpegCmd, { encoding: 'utf8' }, (error, stdout, stderr) => {
+      const output = stderr || stdout || '';
+      const lines = output.split('\n');
+      for (const line of lines) {
+        const match = line.match(/"([^\"]+)"\s+\(audio\)/);
+        if (match) {
+          resolve(match[1]); // Return the first detected audio device name
+          return;
+        }
+      }
+      // Fallback to default if none detected
+      resolve('default');
+    });
+  });
+} 
