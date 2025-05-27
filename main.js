@@ -134,10 +134,9 @@ ipcMain.handle('start-transcription', async (event) => {
       audioRecordingProcess = null;
     });
 
-    // Create a readable stream for AWS Transcribe
-    const audioStream = new Readable({
-      read(size) {} // This will be pushed to by the audioRecordingProcess
-    });
+    // Create a transform stream to handle audio chunks
+    let audioBuffer = Buffer.alloc(0);
+    const CHUNK_SIZE = 32000; // 1 second of audio at 16kHz, 16-bit mono
 
     // Start the transcription stream
     const command = new StartStreamTranscriptionCommand({
@@ -145,29 +144,35 @@ ipcMain.handle('start-transcription', async (event) => {
       MediaSampleRateHertz: 16000,
       MediaEncoding: 'pcm',
       AudioStream: async function* () {
-        while (true) {
-          const chunk = await new Promise(resolve => {
-            audioStream.once('data', chunk => resolve(chunk));
-            audioStream.once('end', () => resolve(null));
-          });
-          
-          if (!chunk) break;
-          yield { AudioEvent: { AudioChunk: chunk } };
+        try {
+          while (true) {
+            const chunk = await new Promise((resolve) => {
+              audioRecordingProcess.stdout.once('data', (data) => {
+                resolve(data);
+              });
+              audioRecordingProcess.stdout.once('end', () => {
+                resolve(null);
+              });
+            });
+
+            if (!chunk) break;
+
+            audioBuffer = Buffer.concat([audioBuffer, chunk]);
+
+            while (audioBuffer.length >= CHUNK_SIZE) {
+              const audioChunk = audioBuffer.slice(0, CHUNK_SIZE);
+              audioBuffer = audioBuffer.slice(CHUNK_SIZE);
+              yield { AudioEvent: { AudioChunk: audioChunk } };
+            }
+          }
+        } catch (error) {
+          console.error('[Main] Audio stream error:', error);
         }
       }(),
       EnablePartialResultsStabilization: true
     });
 
     const transcribeStream = await transcribeClient.send(command);
-
-    // Handle audio data from FFmpeg
-    audioRecordingProcess.stdout.on('data', (chunk) => {
-      audioStream.push(chunk);
-    });
-
-    audioRecordingProcess.stdout.on('end', () => {
-      audioStream.push(null);
-    });
 
     // Store event.sender for use in the async iterator
     const sender = event.sender;
@@ -179,21 +184,23 @@ ipcMain.handle('start-transcription', async (event) => {
           const results = streamEvent.TranscriptEvent.Transcript.Results;
           if (results && results.length > 0) {
             const result = results[0];
-            sender.send('transcription-result', {
-              Transcript: result.Alternatives[0].Transcript,
-              IsPartial: !result.IsPartial,
-              StartTime: result.StartTime,
-              EndTime: result.EndTime
-            });
+            if (result.Alternatives && result.Alternatives.length > 0) {
+              sender.send('transcription-result', {
+                Transcript: result.Alternatives[0].Transcript,
+                IsPartial: !result.IsPartial,
+                StartTime: result.StartTime,
+                EndTime: result.EndTime
+              });
+            }
           }
         }
       }
     } catch (error) {
       if (error.name === 'BadRequestException' && error.message.includes('timed out')) {
-        // Handle timeout gracefully - this is expected when stopping
         console.log('[Main] Transcription stream timed out');
       } else {
-        throw error;
+        console.error('[Main] Transcription error:', error);
+        sender.send('transcription-error', error.message || error.toString());
       }
     }
 
@@ -204,8 +211,6 @@ ipcMain.handle('start-transcription', async (event) => {
     audioRecordingProcess.on('exit', (code) => {
       console.log('[Main] FFmpeg process exited with code:', code);
       audioRecordingProcess = null;
-      // End the audio stream when FFmpeg exits
-      audioStream.push(null);
     });
 
     return 'Recording started';
