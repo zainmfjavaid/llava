@@ -24,7 +24,12 @@ const {
   TranscribeStreamingClient, 
   StartStreamTranscriptionCommand
 } = require('@aws-sdk/client-transcribe-streaming');
-const { Readable } = require('stream');
+const { Readable, PassThrough } = require('stream');
+const { v4: uuidv4 } = require('uuid');
+const http2 = require('http2');
+const WebSocket = require('ws');
+const { promisify } = require('util');
+const sleep = promisify(setTimeout);
 
 // Debug ffmpeg path
 console.log('[Main] FFmpeg path:', ffmpegPath);
@@ -53,6 +58,8 @@ try {
 
 let audioRecordingProcess = null;
 let transcribeClient = null;
+let audioPassThrough = null;
+let isRestarting = false;
 let audioLevelProcess = null;
 
 function createWindow() {
@@ -79,161 +86,318 @@ app.on('window-all-closed', () => {
   }
 });
 
-ipcMain.handle('start-transcription', async (event) => {
-  if (audioRecordingProcess || transcribeClient) {
-    return;
+// Add connection retry function
+async function createTranscribeClient(region, credentials, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = new TranscribeStreamingClient({
+        region,
+        credentials,
+        maxAttempts: 5,
+        requestHandler: {
+          connectionTimeout: 10000,
+          socketTimeout: 300000,
+          keepAlive: true,
+          keepAliveMsecs: 3000,
+          maxSockets: 50,
+          requestTimeout: 300000 // 5 minutes
+        }
+      });
+
+      // Test the connection
+      await client.config.credentials();
+      return client;
+    } catch (error) {
+      console.error(`[Main] Failed to create client (attempt ${i + 1}):`, error);
+      if (i < retries - 1) {
+        await sleep(1000 * Math.pow(2, i)); // Exponential backoff
+        continue;
+      }
+      throw error;
+    }
   }
+}
 
-  const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const awsRegion = process.env.AWS_REGION || 'us-east-1';
-
-  if (!awsAccessKeyId || !awsSecretAccessKey) {
-    throw new Error('AWS credentials not set in environment');
+// Add stream retry function
+async function startTranscriptionStream(client, command, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const stream = await client.send(command);
+      return stream;
+    } catch (error) {
+      console.error(`[Main] Failed to start stream (attempt ${i + 1}):`, error);
+      if (i < retries - 1) {
+        await sleep(1000 * Math.pow(2, i)); // Exponential backoff
+        continue;
+      }
+      throw error;
+    }
   }
+}
 
+// Helper function for transcription with retry logic
+async function startTranscriptionWithRetry(event, attempt = 1, maxRetries = 3) {
   try {
-    // Create Amazon Transcribe client
-    transcribeClient = new TranscribeStreamingClient({
-      region: awsRegion,
-      credentials: {
-        accessKeyId: awsAccessKeyId,
-        secretAccessKey: awsSecretAccessKey
+    if (isRestarting) {
+      isRestarting = false;
+    }
+
+    if (audioRecordingProcess || transcribeClient) {
+      cleanup();
+    }
+
+    const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    const awsRegion = process.env.AWS_REGION || 'us-east-1';
+
+    if (!awsAccessKeyId || !awsSecretAccessKey) {
+      throw new Error('AWS credentials not set in environment');
+    }
+
+    transcribeClient = await createTranscribeClient(awsRegion, {
+      accessKeyId: awsAccessKeyId,
+      secretAccessKey: awsSecretAccessKey
+    });
+
+    const sender = event.sender;
+    let audioBuffer = Buffer.alloc(0);
+    const CHUNK_SIZE = 16384; // 16 KB, safe for AWS Transcribe
+    audioPassThrough = new PassThrough({
+      highWaterMark: 64 * 1024, // 64 KB buffer
+      allowHalfOpen: true
+    });
+    audioPassThrough.on('error', (error) => {
+      try { cleanup(); } catch (e) {}
+    });
+    const args = [
+      '-y', '-fflags', 'nobuffer', '-thread_queue_size', '4096', '-f'
+    ];
+    if (process.platform === 'darwin') {
+      args.push('avfoundation', '-i', ':0');
+    } else if (process.platform === 'win32') {
+      args.push('dshow', '-i', 'audio=Stereo Mix');
+    } else {
+      args.push('pulse', '-i', 'default');
+    }
+    args.push('-vn', '-ac', '2', '-ar', '16000', '-acodec', 'pcm_s16le', '-f', 's16le', '-');
+    audioRecordingProcess = spawn(ffmpegPath, args);
+    audioRecordingProcess.on('error', (error) => {
+      try {
+        if (sender && !sender.isDestroyed()) {
+          sender.send('transcription-error', `FFmpeg error: ${error.message}`);
+        }
+        cleanup();
+      } catch (e) {}
+    });
+    audioRecordingProcess.stderr.on('data', (data) => {
+      try {
+        const msg = data.toString();
+        if (msg.includes('AVCaptureDeviceTypeExternal is deprecated')) return;
+        console.log('[Main] FFmpeg stderr:', msg);
+      } catch (e) {}
+    });
+    audioRecordingProcess.on('exit', (code, signal) => {
+      try {
+        if (code !== 0 && code !== null && signal !== 'SIGTERM' && signal !== 'SIGINT') {
+          if (sender && !sender.isDestroyed()) {
+            sender.send('transcription-error', `FFmpeg process exited with code ${code}`);
+          }
+        }
+        cleanup();
+      } catch (e) {}
+    });
+    const streamReady = new Promise((resolve) => {
+      audioPassThrough.once('readable', resolve);
+    });
+    audioRecordingProcess.stdout.on('data', (chunk) => {
+      try {
+        audioBuffer = Buffer.concat([audioBuffer, chunk]);
+        while (audioBuffer.length >= CHUNK_SIZE) {
+          const audioChunk = audioBuffer.slice(0, CHUNK_SIZE);
+          audioBuffer = audioBuffer.slice(CHUNK_SIZE);
+          if (audioPassThrough && !audioPassThrough.destroyed) {
+            const writeSuccess = audioPassThrough.write(audioChunk);
+            if (!writeSuccess && audioRecordingProcess && !audioRecordingProcess.killed) {
+              audioRecordingProcess.stdout.pause();
+              audioPassThrough.once('drain', () => {
+                try {
+                  if (audioRecordingProcess && !audioRecordingProcess.killed) {
+                    audioRecordingProcess.stdout.resume();
+                  }
+                } catch (e) {}
+              });
+            }
+          }
+        }
+      } catch (error) {
+        cleanup();
+        throw error;
       }
     });
-
-    // Setup FFmpeg arguments for audio capture with input queue buffering
-    const args = ['-y', '-fflags', 'nobuffer', '-thread_queue_size', '512'];
-    
-    if (process.platform === 'darwin') {
-      args.push('-f', 'avfoundation', '-i', ':0', '-vn');
-    } else if (process.platform === 'win32') {
-      args.push('-f', 'dshow', '-i', 'audio=Stereo Mix');
-    } else {
-      args.push('-f', 'pulse', '-i', 'default');
+    await streamReady;
+    async function* audioGenerator() {
+      try {
+        let retryCount = 0;
+        const maxRetries = 3;
+        let lastChunkTime = Date.now();
+        const keepAliveInterval = 2000;
+        let isFirstChunk = true;
+        while (retryCount < maxRetries) {
+          try {
+            for await (const chunk of audioPassThrough) {
+              if (chunk && chunk.length > 0) {
+                if (isFirstChunk) {
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  isFirstChunk = false;
+                }
+                const now = Date.now();
+                if (now - lastChunkTime > keepAliveInterval) {
+                  yield { AudioEvent: { AudioChunk: Buffer.alloc(2) } };
+                }
+                yield { AudioEvent: { AudioChunk: chunk } };
+                lastChunkTime = now;
+                await new Promise(resolve => setTimeout(resolve, 20));
+              }
+            }
+            break;
+          } catch (error) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              if (audioPassThrough && !audioPassThrough.destroyed) {
+                audioPassThrough.removeAllListeners();
+                audioPassThrough.end();
+              }
+              audioPassThrough = new PassThrough({
+                highWaterMark: 64 * 1024,
+                allowHalfOpen: true
+              });
+              continue;
+            }
+            cleanup();
+            throw error;
+          }
+        }
+      } catch (error) {
+        cleanup();
+        throw error;
+      }
     }
-    
-    // Configure audio codec for Amazon Transcribe
-    args.push(
-      '-ac', '1',                // mono audio
-      '-ar', '16000',           // 16kHz sample rate
-      '-acodec', 'pcm_s16le',   // 16-bit PCM
-      '-f', 'wav',              // WAV format
-      '-'                       // Output to stdout
-    );
-
-    console.log('[Main] Starting ffmpeg with args:', args);
-    console.log('[Main] FFmpeg binary path:', ffmpegPath);
-
-    audioRecordingProcess = spawn(ffmpegPath, args);
-
-    // Add error handling for spawn
-    audioRecordingProcess.on('error', (error) => {
-      console.error('[Main] FFmpeg spawn error:', error);
-      event.sender.send('transcription-error', `FFmpeg error: ${error.message}`);
-      audioRecordingProcess = null;
-    });
-
-    // Create a transform stream to handle audio chunks
-    let audioBuffer = Buffer.alloc(0);
-    const CHUNK_SIZE = 32000; // 1 second of audio at 16kHz, 16-bit mono
-
-    // Start the transcription stream
     const command = new StartStreamTranscriptionCommand({
       LanguageCode: 'en-US',
       MediaSampleRateHertz: 16000,
       MediaEncoding: 'pcm',
-      AudioStream: async function* () {
-        try {
-          while (true) {
-            const chunk = await new Promise((resolve) => {
-              audioRecordingProcess.stdout.once('data', (data) => {
-                resolve(data);
-              });
-              audioRecordingProcess.stdout.once('end', () => {
-                resolve(null);
-              });
-            });
-
-            if (!chunk) break;
-
-            audioBuffer = Buffer.concat([audioBuffer, chunk]);
-
-            while (audioBuffer.length >= CHUNK_SIZE) {
-              const audioChunk = audioBuffer.slice(0, CHUNK_SIZE);
-              audioBuffer = audioBuffer.slice(CHUNK_SIZE);
-              yield { AudioEvent: { AudioChunk: audioChunk } };
-            }
-          }
-        } catch (error) {
-          console.error('[Main] Audio stream error:', error);
-        }
-      }(),
-      EnablePartialResultsStabilization: true
+      AudioStream: audioGenerator(),
+      EnablePartialResultsStabilization: true,
+      ShowSpeakerLabels: false,
+      NumberOfChannels: 2,
+      EnableChannelIdentification: true,
+      SessionId: uuidv4()
     });
-
-    const transcribeStream = await transcribeClient.send(command);
-
-    // Store event.sender for use in the async iterator
-    const sender = event.sender;
-
-    // Handle transcription results
+    const transcribeStream = await startTranscriptionStream(transcribeClient, command);
     try {
       for await (const streamEvent of transcribeStream.TranscriptResultStream) {
-        if (streamEvent.TranscriptEvent && streamEvent.TranscriptEvent.Transcript) {
-          const results = streamEvent.TranscriptEvent.Transcript.Results;
-          if (results && results.length > 0) {
-            const result = results[0];
-            if (result.Alternatives && result.Alternatives.length > 0) {
-              sender.send('transcription-result', {
-                Transcript: result.Alternatives[0].Transcript,
-                IsPartial: !result.IsPartial,
-                StartTime: result.StartTime,
-                EndTime: result.EndTime
-              });
-            }
+        if (streamEvent.TranscriptEvent?.Transcript?.Results?.[0]?.Alternatives?.[0]) {
+          const result = streamEvent.TranscriptEvent.Transcript.Results[0];
+          if (sender && !sender.isDestroyed()) {
+            sender.send('transcription-result', {
+              Transcript: result.Alternatives[0].Transcript,
+              IsPartial: !result.IsPartial,
+              StartTime: result.StartTime,
+              EndTime: result.EndTime
+            });
           }
         }
       }
     } catch (error) {
-      if (error.name === 'BadRequestException' && error.message.includes('timed out')) {
-        console.log('[Main] Transcription stream timed out');
+      if (
+        error.code === 'ERR_STREAM_PREMATURE_CLOSE' ||
+        (error.message && error.message.includes('HTTP/2 stream is abnormally aborted'))
+      ) {
+        cleanup();
+        if (attempt < maxRetries) {
+          await sleep(1000);
+          return await startTranscriptionWithRetry(event, attempt + 1, maxRetries);
+        } else {
+          if (sender && !sender.isDestroyed()) {
+            sender.send('transcription-error', 'Stream closed prematurely after several attempts.');
+          }
+          return 'Stream closed prematurely after several attempts.';
+        }
+      }
+      if (!isRestarting && (error.name === 'BadRequestException' && error.message.includes('timed out') || error.message.includes('HTTP/2 stream'))) {
+        cleanup();
+        isRestarting = true;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        sender.send('start-transcription');
+        return 'Restarting...';
       } else {
-        console.error('[Main] Transcription error:', error);
-        sender.send('transcription-error', error.message || error.toString());
+        if (sender && !sender.isDestroyed()) {
+          sender.send('transcription-error', error.message || error.toString());
+        }
+        cleanup();
+        return error.message || error.toString();
       }
     }
-
-    audioRecordingProcess.stderr.on('data', (data) => {
-      console.log('[Main] FFmpeg stderr:', data.toString());
-    });
-
-    audioRecordingProcess.on('exit', (code) => {
-      console.log('[Main] FFmpeg process exited with code:', code);
-      audioRecordingProcess = null;
-    });
-
     return 'Recording started';
-
   } catch (error) {
-    console.error('[Main] Failed to start transcription:', error);
-    throw error;
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.send('transcription-error', error.message || error.toString());
+    }
+    return error.message || error.toString();
+  }
+}
+
+// Use the helper in the handler
+ipcMain.handle('start-transcription', async (event) => {
+  return await startTranscriptionWithRetry(event, 1, 3);
+});
+
+// Add handler for restart
+ipcMain.on('start-transcription', async (event) => {
+  try {
+    await ipcMain.handle('start-transcription', event);
+  } catch (error) {
+    console.error('[Main] Error during restart:', error);
+    event.sender.send('transcription-error', error.message || error.toString());
   }
 });
 
+function cleanup() {
+  try {
+    if (audioRecordingProcess) {
+      audioRecordingProcess.stdout.removeAllListeners();
+      audioRecordingProcess.stderr.removeAllListeners();
+      audioRecordingProcess.removeAllListeners();
+      audioRecordingProcess.kill('SIGINT');
+      audioRecordingProcess = null;
+    }
+  } catch (error) {
+    console.error('[Main] Error killing FFmpeg process:', error);
+  }
+
+  try {
+    if (audioPassThrough) {
+      audioPassThrough.removeAllListeners();
+      audioPassThrough.end();
+      audioPassThrough = null;
+    }
+  } catch (error) {
+    console.error('[Main] Error ending PassThrough stream:', error);
+  }
+
+  try {
+    if (transcribeClient) {
+      transcribeClient.destroy();
+      transcribeClient = null;
+    }
+  } catch (error) {
+    console.error('[Main] Error destroying Transcribe client:', error);
+  }
+}
+
 ipcMain.handle('stop-transcription', () => {
-  // Stop audio recording process
-  if (audioRecordingProcess) {
-    audioRecordingProcess.kill('SIGINT');
-    audioRecordingProcess = null;
-  }
-
-  // Close Amazon Transcribe connection
-  if (transcribeClient) {
-    transcribeClient.destroy();
-    transcribeClient = null;
-  }
-
+  cleanup();
   console.log('[Main] Transcription stopped');
   return 'Recording stopped';
 });
