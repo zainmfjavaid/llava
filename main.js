@@ -3,6 +3,8 @@ console.log('[Main] main.js script started execution.');
 // Initialize Electron modules and load environment variables
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
+const { spawn, exec } = require('child_process'); // Combined require
+const fs = require('fs');
 // Load environment variables from .env (packaged vs dev)
 require('dotenv').config({
   path: app.isPackaged
@@ -15,9 +17,6 @@ updateElectronApp({
   repo: 'zainmfjavaid/llava',
   updateInterval: '1 hour'
 });
-const { spawn } = require('child_process');
-const fs = require('fs');
-const { exec } = require('child_process');
 const ffmpegPath = app.isPackaged 
   ? path.join(process.resourcesPath, 'ffmpeg')
   : require('ffmpeg-static');
@@ -45,6 +44,71 @@ try {
   }
 } catch (e) {
   console.error('[Main] Error checking ffmpeg existence:', e);
+}
+
+// Helper: Detect Windows dshow audio devices (mic and loopback)
+async function getWindowsAudioSourcesDshow() {
+  return new Promise((resolve) => {
+    const cmd = `"${ffmpegPath}" -list_devices true -f dshow -i dummy`;
+    exec(cmd, { encoding: 'utf8' }, (error, stdout, stderr) => {
+      const output = stderr || stdout || '';
+      const lines = output.split('\n');
+      
+      let primaryMic = null;
+      let systemLoopback = null;
+      const foundDeviceNames = [];
+      const loopbackKeywords = ['stereo mix', 'wave out', 'what u hear', 'what you hear', 'loopback', 'record master'];
+
+      for (const line of lines) {
+        const match = line.match(/"([^"]+)"\s+\(audio\)/);
+        if (match && match[1]) {
+          foundDeviceNames.push(match[1]);
+        }
+      }
+
+      // Try to find a loopback device first
+      for (const deviceName of foundDeviceNames) {
+        for (const keyword of loopbackKeywords) {
+          if (deviceName.toLowerCase().includes(keyword)) {
+            systemLoopback = deviceName;
+            break;
+          }
+        }
+        if (systemLoopback) break;
+      }
+
+      // Try to find a primary microphone (that isn't the loopback device)
+      for (const deviceName of foundDeviceNames) {
+        if (deviceName === systemLoopback) continue; 
+        primaryMic = deviceName; // Take the first non-loopback device
+        break; 
+      }
+      
+      // If no specific primary mic found (e.g., all devices sounded like loopbacks or only one device exists)
+      // and we have devices, take the first one, unless it's already our systemLoopback.
+      if (!primaryMic && foundDeviceNames.length > 0) {
+          if (foundDeviceNames[0] !== systemLoopback) {
+            primaryMic = foundDeviceNames[0];
+          } else if (foundDeviceNames.length > 1 && foundDeviceNames[1] !== systemLoopback) {
+            // If first was loopback, try second if it exists and is not also loopback
+            primaryMic = foundDeviceNames[1];
+          }
+      }
+      
+      // If after all that, mic is still the same as loopback, prioritize the loopback if only one device.
+      // Or, if we *only* found something that looks like a loopback, primaryMic might be null.
+      if (primaryMic === systemLoopback) { // If they ended up the same
+          // This implies we might have only found one device, and it matched a loopback keyword.
+          // In this scenario, it's ambiguous. Let's assume it could be a mic if systemLoopback was its only hit.
+          // This logic is tricky; the goal is to provide *A* mic if possible, and *A* loopback if possible.
+          // If only "Stereo Mix" is found, primaryMic will be null, systemLoopback will be "Stereo Mix".
+      }
+
+
+      console.log(`[Main] Detected dshow audio sources - Mic: ${primaryMic}, Loopback: ${systemLoopback}`);
+      resolve({ micDevice: primaryMic, loopbackDevice: systemLoopback });
+    });
+  });
 }
 
 const { createClient, LiveTranscriptionEvents } = require('@deepgram/sdk');
@@ -90,10 +154,7 @@ ipcMain.handle('start-transcription', async (event) => {
   }
 
   try {
-    // Create Deepgram client
     const deepgram = createClient(apiKey);
-
-    // Setup live transcription connection
     transcriptionConnection = deepgram.listen.live({
       model: 'nova-3',
       language: 'en-US',
@@ -107,37 +168,52 @@ ipcMain.handle('start-transcription', async (event) => {
       channels: 1
     });
 
-    // Handle transcription events
+    console.log('[Main] Deepgram connection initiated.');
     transcriptionConnection.on(LiveTranscriptionEvents.Open, () => {
+      console.log('[Main] Deepgram connection OPEN.');
     });
-
     transcriptionConnection.on(LiveTranscriptionEvents.Transcript, (data) => {
+      console.log('[Main] Deepgram Transcript received:', JSON.stringify(data));
       event.sender.send('transcription-result', data);
     });
-
     transcriptionConnection.on(LiveTranscriptionEvents.Error, (error) => {
+      console.error('[Main] Deepgram Error:', error);
       event.sender.send('transcription-error', error.message || error.toString());
     });
-
     transcriptionConnection.on(LiveTranscriptionEvents.Close, () => {
+      console.log('[Main] Deepgram connection CLOSED.');
     });
 
-
-    // Setup FFmpeg arguments for audio capture with input queue buffering
     const args = ['-y', '-fflags', 'nobuffer', '-thread_queue_size', '512'];
     
     if (process.platform === 'darwin') {
       args.push('-f', 'avfoundation', '-i', ':0', '-vn');
     } else if (process.platform === 'win32') {
-      // Dynamically detect the default DirectShow audio device
-      const deviceName = await getDefaultDshowAudioDevice();
-      console.log(`[Main] Using Windows audio device: ${deviceName}`);
-      args.push('-f', 'dshow', '-i', `audio=${deviceName}`);
-    } else {
+      const sources = await getWindowsAudioSourcesDshow();
+      
+      if (sources.micDevice && sources.loopbackDevice) {
+        console.log(`[Main] Using Windows Mic: "${sources.micDevice}" AND System Loopback: "${sources.loopbackDevice}"`);
+        args.push(
+          '-f', 'dshow', '-i', `audio=${sources.micDevice}`,
+          '-f', 'dshow', '-i', `audio=${sources.loopbackDevice}`,
+          '-filter_complex', '[0:a][1:a]amerge=inputs=2[a]', // Merge two inputs
+          '-map', '[a]' // Map the merged stream to output
+        );
+      } else if (sources.micDevice) {
+        console.log(`[Main] Using Windows Mic: "${sources.micDevice}" (System Loopback not found/used)`);
+        args.push('-f', 'dshow', '-i', `audio=${sources.micDevice}`);
+      } else if (sources.loopbackDevice) {
+        console.log(`[Main] Using Windows System Loopback: "${sources.loopbackDevice}" (Mic not found/used)`);
+        args.push('-f', 'dshow', '-i', `audio=${sources.loopbackDevice}`);
+      } else {
+        console.warn('[Main] No suitable Windows audio input devices found by dshow enumeration. Falling back to "audio=default".');
+        args.push('-f', 'dshow', '-i', 'audio=default'); // Fallback if no specific devices found
+      }
+    } else { // Linux, etc.
       args.push('-f', 'pulse', '-i', 'default');
     }
     
-    // Configure audio codec
+    // Common audio output configuration for Deepgram
     args.push('-ac', '1', '-ar', '16000', '-acodec', 'pcm_s16le', '-f', 'wav', '-');
 
     console.log('[Main] Starting ffmpeg with args:', args);
@@ -145,32 +221,26 @@ ipcMain.handle('start-transcription', async (event) => {
 
     audioRecordingProcess = spawn(ffmpegPath, args);
 
-    // Add error handling for spawn
     audioRecordingProcess.on('error', (error) => {
       console.error('[Main] FFmpeg spawn error:', error);
       event.sender.send('transcription-error', `FFmpeg error: ${error.message}`);
       audioRecordingProcess = null;
     });
 
-    // Handle audio data
     audioRecordingProcess.stdout.on('data', (chunk) => {
-      // Send to Deepgram for live transcription
       if (transcriptionConnection && transcriptionConnection.getReadyState() === 1) {
         transcriptionConnection.send(chunk);
       }
     });
-
     audioRecordingProcess.stderr.on('data', (data) => {
       console.log('[Main] FFmpeg stderr:', data.toString());
     });
-
     audioRecordingProcess.on('exit', (code) => {
       console.log('[Main] FFmpeg process exited with code:', code);
       audioRecordingProcess = null;
     });
 
     return 'Recording started';
-
   } catch (error) {
     console.error('[Main] Failed to start transcription:', error);
     throw error;
