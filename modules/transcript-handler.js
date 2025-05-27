@@ -5,76 +5,62 @@ let autoScrollEnabled = true;    // Auto-scroll state for transcript
 let lastSpeaker = null;          // Track the last speaker for line breaks
 let lastEndTime = 0;             // Track when the last segment ended
 
-// Handle Deepgram transcription results
+// Handle Amazon Transcribe results
 export function handleTranscriptionResult(data) {
-  if (data.channel && data.channel.alternatives && data.channel.alternatives.length > 0) {
-    const alternative = data.channel.alternatives[0];
-    const transcript = alternative.transcript;
+  if (!data.Transcript) return;
+
+  const transcript = data.Transcript;
+  
+  if (transcript && transcript.trim().length > 0) {
+    // Get timing information if available
+    const segmentStart = data.StartTime || 0;
+    const segmentEnd = data.EndTime || 0;
     
-    if (transcript && transcript.trim().length > 0) {
-      // Get timing information
-      const segmentStart = data.start || 0;
-      const segmentDuration = data.duration || 0;
-      const segmentEnd = segmentStart + segmentDuration;
+    // Determine the speaker if available
+    let primarySpeaker = null;
+    if (data.SpeakerLabel) {
+      primarySpeaker = parseInt(data.SpeakerLabel.replace('spk_', ''));
+    }
+    
+    // Determine if we need a double newline
+    let needsNewline = false;
+    
+    // Add newline if speaker changed
+    if (primarySpeaker !== null && lastSpeaker !== null && primarySpeaker !== lastSpeaker) {
+      needsNewline = true;
+    }
+    
+    if (data.IsPartial === false) {
+      // Final result - add to permanent transcript
+      let textToAdd = transcript;
       
-      // Determine the primary speaker for this segment (for line break detection)
-      let primarySpeaker = null;
-      if (alternative.words && alternative.words.length > 0) {
-        // Find the most common speaker in this segment
-        const speakerCounts = {};
-        alternative.words.forEach(word => {
-          if (word.speaker !== undefined) {
-            speakerCounts[word.speaker] = (speakerCounts[word.speaker] || 0) + 1;
-          }
-        });
-        
-        if (Object.keys(speakerCounts).length > 0) {
-          primarySpeaker = parseInt(Object.keys(speakerCounts).reduce((a, b) => 
-            speakerCounts[a] > speakerCounts[b] ? a : b
-          ));
-        }
+      // Add double newline prefix if needed
+      if (needsNewline) {
+        textToAdd = '\n\n' + textToAdd;
       }
       
-      // Determine if we need a double newline
-      let needsNewline = false;
+      currentTranscript += textToAdd + ' ';
+      elements.transcriptContent.textContent = currentTranscript;
       
-      // Add newline if speaker changed
-      if (primarySpeaker !== null && lastSpeaker !== null && primarySpeaker !== lastSpeaker) {
-        needsNewline = true;
+      // Update tracking variables
+      lastSpeaker = primarySpeaker;
+      lastEndTime = segmentEnd;
+      
+      if (autoScrollEnabled) {
+        elements.transcriptContent.scrollTop = elements.transcriptContent.scrollHeight;
+      }
+    } else {
+      // Interim result - show temporarily
+      let textToAdd = transcript;
+      
+      // Add double newline prefix if needed for interim display
+      if (needsNewline) {
+        textToAdd = '\n\n' + textToAdd;
       }
       
-      if (data.is_final) {
-        // Final result - add to permanent transcript
-        let textToAdd = transcript;
-        
-        // Add double newline prefix if needed
-        if (needsNewline) {
-          textToAdd = '\n\n' + textToAdd;
-        }
-        
-        currentTranscript += textToAdd + ' ';
-        elements.transcriptContent.textContent = currentTranscript;
-        
-        // Update tracking variables
-        lastSpeaker = primarySpeaker;
-        lastEndTime = segmentEnd;
-        
-        if (autoScrollEnabled) {
-          elements.transcriptContent.scrollTop = elements.transcriptContent.scrollHeight;
-        }
-      } else {
-        // Interim result - show temporarily
-        let textToAdd = transcript;
-        
-        // Add double newline prefix if needed for interim display
-        if (needsNewline) {
-          textToAdd = '\n\n' + textToAdd;
-        }
-        
-        elements.transcriptContent.textContent = currentTranscript + textToAdd;
-        if (autoScrollEnabled) {
-          elements.transcriptContent.scrollTop = elements.transcriptContent.scrollHeight;
-        }
+      elements.transcriptContent.textContent = currentTranscript + textToAdd;
+      if (autoScrollEnabled) {
+        elements.transcriptContent.scrollTop = elements.transcriptContent.scrollHeight;
       }
     }
   }

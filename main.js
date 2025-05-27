@@ -20,6 +20,11 @@ const { exec } = require('child_process');
 const ffmpegPath = app.isPackaged 
   ? path.join(process.resourcesPath, 'ffmpeg')
   : require('ffmpeg-static');
+const { 
+  TranscribeStreamingClient, 
+  StartStreamTranscriptionCommand
+} = require('@aws-sdk/client-transcribe-streaming');
+const { Readable } = require('stream');
 
 // Debug ffmpeg path
 console.log('[Main] FFmpeg path:', ffmpegPath);
@@ -46,10 +51,8 @@ try {
   console.error('[Main] Error checking ffmpeg existence:', e);
 }
 
-const { createClient, LiveTranscriptionEvents } = require('@deepgram/sdk');
-
 let audioRecordingProcess = null;
-let transcriptionConnection = null;
+let transcribeClient = null;
 let audioLevelProcess = null;
 
 function createWindow() {
@@ -77,48 +80,27 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.handle('start-transcription', async (event) => {
-  if (audioRecordingProcess || transcriptionConnection) {
+  if (audioRecordingProcess || transcribeClient) {
     return;
   }
 
-  const apiKey = process.env.DEEPGRAM_API_KEY;
-  if (!apiKey) {
-    throw new Error('DEEPGRAM_API_KEY not set in environment');
+  const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const awsRegion = process.env.AWS_REGION || 'us-east-1';
+
+  if (!awsAccessKeyId || !awsSecretAccessKey) {
+    throw new Error('AWS credentials not set in environment');
   }
 
   try {
-    // Create Deepgram client
-    const deepgram = createClient(apiKey);
-
-    // Setup live transcription connection
-    transcriptionConnection = deepgram.listen.live({
-      model: 'nova-3',
-      language: 'en-US',
-      smart_format: true,
-      interim_results: true,
-      utterance_end_ms: 1000,
-      vad_events: true,
-      diarize: true,
-      encoding: 'linear16',
-      sample_rate: 16000,
-      channels: 1
+    // Create Amazon Transcribe client
+    transcribeClient = new TranscribeStreamingClient({
+      region: awsRegion,
+      credentials: {
+        accessKeyId: awsAccessKeyId,
+        secretAccessKey: awsSecretAccessKey
+      }
     });
-
-    // Handle transcription events
-    transcriptionConnection.on(LiveTranscriptionEvents.Open, () => {
-    });
-
-    transcriptionConnection.on(LiveTranscriptionEvents.Transcript, (data) => {
-      event.sender.send('transcription-result', data);
-    });
-
-    transcriptionConnection.on(LiveTranscriptionEvents.Error, (error) => {
-      event.sender.send('transcription-error', error.message || error.toString());
-    });
-
-    transcriptionConnection.on(LiveTranscriptionEvents.Close, () => {
-    });
-
 
     // Setup FFmpeg arguments for audio capture with input queue buffering
     const args = ['-y', '-fflags', 'nobuffer', '-thread_queue_size', '512'];
@@ -131,8 +113,14 @@ ipcMain.handle('start-transcription', async (event) => {
       args.push('-f', 'pulse', '-i', 'default');
     }
     
-    // Configure audio codec
-    args.push('-ac', '1', '-ar', '16000', '-acodec', 'pcm_s16le', '-f', 'wav', '-');
+    // Configure audio codec for Amazon Transcribe
+    args.push(
+      '-ac', '1',                // mono audio
+      '-ar', '16000',           // 16kHz sample rate
+      '-acodec', 'pcm_s16le',   // 16-bit PCM
+      '-f', 'wav',              // WAV format
+      '-'                       // Output to stdout
+    );
 
     console.log('[Main] Starting ffmpeg with args:', args);
     console.log('[Main] FFmpeg binary path:', ffmpegPath);
@@ -146,13 +134,68 @@ ipcMain.handle('start-transcription', async (event) => {
       audioRecordingProcess = null;
     });
 
-    // Handle audio data
-    audioRecordingProcess.stdout.on('data', (chunk) => {
-      // Send to Deepgram for live transcription
-      if (transcriptionConnection && transcriptionConnection.getReadyState() === 1) {
-        transcriptionConnection.send(chunk);
-      }
+    // Create a readable stream for AWS Transcribe
+    const audioStream = new Readable({
+      read(size) {} // This will be pushed to by the audioRecordingProcess
     });
+
+    // Start the transcription stream
+    const command = new StartStreamTranscriptionCommand({
+      LanguageCode: 'en-US',
+      MediaSampleRateHertz: 16000,
+      MediaEncoding: 'pcm',
+      AudioStream: async function* () {
+        while (true) {
+          const chunk = await new Promise(resolve => {
+            audioStream.once('data', chunk => resolve(chunk));
+            audioStream.once('end', () => resolve(null));
+          });
+          
+          if (!chunk) break;
+          yield { AudioEvent: { AudioChunk: chunk } };
+        }
+      }(),
+      EnablePartialResultsStabilization: true
+    });
+
+    const transcribeStream = await transcribeClient.send(command);
+
+    // Handle audio data from FFmpeg
+    audioRecordingProcess.stdout.on('data', (chunk) => {
+      audioStream.push(chunk);
+    });
+
+    audioRecordingProcess.stdout.on('end', () => {
+      audioStream.push(null);
+    });
+
+    // Store event.sender for use in the async iterator
+    const sender = event.sender;
+
+    // Handle transcription results
+    try {
+      for await (const streamEvent of transcribeStream.TranscriptResultStream) {
+        if (streamEvent.TranscriptEvent && streamEvent.TranscriptEvent.Transcript) {
+          const results = streamEvent.TranscriptEvent.Transcript.Results;
+          if (results && results.length > 0) {
+            const result = results[0];
+            sender.send('transcription-result', {
+              Transcript: result.Alternatives[0].Transcript,
+              IsPartial: !result.IsPartial,
+              StartTime: result.StartTime,
+              EndTime: result.EndTime
+            });
+          }
+        }
+      }
+    } catch (error) {
+      if (error.name === 'BadRequestException' && error.message.includes('timed out')) {
+        // Handle timeout gracefully - this is expected when stopping
+        console.log('[Main] Transcription stream timed out');
+      } else {
+        throw error;
+      }
+    }
 
     audioRecordingProcess.stderr.on('data', (data) => {
       console.log('[Main] FFmpeg stderr:', data.toString());
@@ -161,6 +204,8 @@ ipcMain.handle('start-transcription', async (event) => {
     audioRecordingProcess.on('exit', (code) => {
       console.log('[Main] FFmpeg process exited with code:', code);
       audioRecordingProcess = null;
+      // End the audio stream when FFmpeg exits
+      audioStream.push(null);
     });
 
     return 'Recording started';
@@ -172,18 +217,16 @@ ipcMain.handle('start-transcription', async (event) => {
 });
 
 ipcMain.handle('stop-transcription', () => {
-  
   // Stop audio recording process
   if (audioRecordingProcess) {
     audioRecordingProcess.kill('SIGINT');
     audioRecordingProcess = null;
   }
 
-
-  // Close Deepgram connection
-  if (transcriptionConnection) {
-    transcriptionConnection.finish();
-    transcriptionConnection = null;
+  // Close Amazon Transcribe connection
+  if (transcribeClient) {
+    transcribeClient.destroy();
+    transcribeClient = null;
   }
 
   console.log('[Main] Transcription stopped');
