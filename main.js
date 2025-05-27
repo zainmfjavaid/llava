@@ -233,13 +233,26 @@ ipcMain.handle('get-audio-devices', async () => {
         const output = stderr || stdout;
         const lines = output.split('\n');
         
+        let inAudioSection = false;
         for (const line of lines) {
-          const audioMatch = line.match(/"([^"]+)"\s+\(audio\)/);
-          if (audioMatch) {
-            resolve({ id: '0', name: audioMatch[1] });
-            return;
+          if (line.includes('DirectShow audio devices')) {
+            inAudioSection = true;
+            continue;
+          }
+          if (inAudioSection && line.includes('DirectShow video devices')) {
+            break;
+          }
+
+          if (inAudioSection) {
+            const match = line.match(/"([^\"]+)"/);
+            if (match) {
+              resolve({ id: '0', name: match[1] });
+              return;
+            }
           }
         }
+
+        // Fallback
         resolve({ id: '0', name: 'Default Microphone' });
       });
     } else {
@@ -427,13 +440,25 @@ async function getDefaultDshowAudioDevice() {
     exec(ffmpegCmd, { encoding: 'utf8' }, (error, stdout, stderr) => {
       const output = stderr || stdout || '';
       const lines = output.split('\n');
+      let inAudioSection = false;
       for (const line of lines) {
-        const match = line.match(/"([^\"]+)"\s+\(audio\)/);
-        if (match) {
-          resolve(match[1]); // Return the first detected audio device name
-          return;
+        if (line.includes('DirectShow audio devices')) {
+          inAudioSection = true;
+          continue;
+        }
+        if (inAudioSection && line.includes('DirectShow video devices')) {
+          break;
+        }
+
+        if (inAudioSection) {
+          const match = line.match(/"([^\"]+)"/);
+          if (match) {
+            resolve(match[1]); // Return first detected audio device name
+            return;
+          }
         }
       }
+
       // Fallback to default if none detected
       resolve('default');
     });
