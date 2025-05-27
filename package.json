@@ -1,7 +1,7 @@
 {
   "name": "llava",
   "productName": "llava",
-  "version": "1.0.4",
+  "version": "1.0.26",
   "description": "AI Meeting Notes",
   "author": "llava",
   "main": "main.js",
@@ -9,9 +9,11 @@
     "start": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "dist:mac": "electron-builder --mac --publish always",
-    "dist:win": "electron-builder --win --x64 --publish always",
-    "release": "npm run dist:mac && npm run dist:win"
+    "dist:mac": "rm -rf node_modules && npm install && electron-builder --mac --publish always",
+    "dist:win": "rm -rf node_modules && npm_config_platform=win32 npm_config_arch=x64 npm install && electron-builder --win --x64 --publish always",
+    "dist:linux": "rm -rf node_modules && npm_config_platform=linux npm_config_arch=x64 npm install && electron-builder --linux --publish always",
+    "release": "npm run dist:mac && npm run dist:win && npm run dist:linux",
+    "test-ffmpeg": "node scripts/test-ffmpeg.js"
   },
   "devDependencies": {
     "@electron/notarize": "^3.0.1",
@@ -46,8 +48,7 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "zip"
+        "nsis"
       ],
       "icon": "images/icon.ico"
     },
@@ -63,8 +64,12 @@
     "extraResources": [
       ".env",
       {
-        "from": "node_modules/ffmpeg-static/ffmpeg",
-        "to": "ffmpeg"
+        "from": "node_modules/ffmpeg-static/",
+        "to": "ffmpeg-static/",
+        "filter": [
+          "ffmpeg.exe",
+          "ffmpeg"
+        ]
       }
     ]
   },

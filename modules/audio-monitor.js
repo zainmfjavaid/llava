@@ -71,8 +71,19 @@ export async function loadAudioDeviceWithPermission() {
 export function startAudioMonitoring() {
   if (isMonitoring) return;
 
+  // Enhanced Web Audio approach with better error handling
+  const audioConstraints = {
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 1,
+      sampleRate: 16000
+    }
+  };
+
   // Try Web Audio first
-  navigator.mediaDevices.getUserMedia({ audio: true })
+  navigator.mediaDevices.getUserMedia(audioConstraints)
     .then((stream) => {
       micStream = stream;
 
@@ -127,10 +138,33 @@ export function startAudioMonitoring() {
     })
     .catch((err) => {
       console.error('Web Audio monitoring failed:', err);
-      // Fallback to IPC-based monitoring
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      
+      // Provide specific guidance based on error type
+      if (err.name === 'NotAllowedError') {
+        console.error('Microphone permission denied - user needs to allow microphone access');
+        // Show user-friendly error message
+        if (window.electronAPI && window.electronAPI.openPrivacySettings) {
+          console.log('Opening privacy settings to help user grant permission');
+        }
+      } else if (err.name === 'NotFoundError') {
+        console.error('No microphone device found');
+      } else if (err.name === 'NotReadableError') {
+        console.error('Microphone device is already in use or hardware error');
+      }
+      
+      // Fallback to IPC-based monitoring with enhanced error handling
       if (window.electronAPI && window.electronAPI.startAudioMonitoring) {
-        window.electronAPI.startAudioMonitoring();
-        isMonitoring = true;
+        console.log('Attempting fallback to system-level audio monitoring...');
+        window.electronAPI.startAudioMonitoring()
+          .then(() => {
+            isMonitoring = true;
+            console.log('Fallback audio monitoring started successfully');
+          })
+          .catch((fallbackErr) => {
+            console.error('Fallback audio monitoring also failed:', fallbackErr);
+          });
       }
     });
 }

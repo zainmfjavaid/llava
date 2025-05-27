@@ -71,8 +71,18 @@ export function initializeAuthUI() {
         // Set up error listener first
         const errorHandler = (error) => {
           console.error('Audio monitoring error:', error);
+          console.error('Error type:', typeof error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          
+          // Only show permission instructions for actual permission errors
+          // "Process exited with code 1" on Windows can be normal during device testing
           if (error.includes('Permission denied') || error.includes('Operation not permitted')) {
             showPermissionInstructions();
+          } else if (error.includes('Process exited with code 1')) {
+            console.log('[Auth UI] FFmpeg exit code 1 - this may be normal during device testing on Windows');
+            // Don't show permission instructions for this error
+          } else {
+            console.warn('[Auth UI] Unexpected audio monitoring error:', error);
           }
         };
         
@@ -83,15 +93,26 @@ export function initializeAuthUI() {
         try {
           await window.electronAPI.startAudioMonitoring();
           
-          // Wait a moment to see if it works
+          // Wait a moment to see if it works, then stop monitoring
           setTimeout(async () => {
-            await window.electronAPI.stopAudioMonitoring();
-            sysAudioGranted = true;
-            sysAudioPermBtn.textContent = 'Enabled';
-            sysAudioPermBtn.disabled = true;
-            updateContinueState();
-          }, 1000);
+            try {
+              await window.electronAPI.stopAudioMonitoring();
+              sysAudioGranted = true;
+              sysAudioPermBtn.textContent = 'Enabled';
+              sysAudioPermBtn.disabled = true;
+              updateContinueState();
+              console.log('[Auth UI] Audio monitoring test successful');
+            } catch (stopError) {
+              console.warn('[Auth UI] Error stopping audio monitoring:', stopError);
+              // Still consider it successful if we got this far
+              sysAudioGranted = true;
+              sysAudioPermBtn.textContent = 'Enabled';
+              sysAudioPermBtn.disabled = true;
+              updateContinueState();
+            }
+          }, 1500);
         } catch (monitorError) {
+          console.error('[Auth UI] Audio monitoring start failed:', monitorError);
           // If monitoring fails, show manual instructions
           showPermissionInstructions();
         }
@@ -196,7 +217,6 @@ export function initializeAuthUI() {
   }
 
   function updateAuthMode() {
-    clearError();
     if (isLoginMode) {
       loginTab.classList.add('active');
       signupTab.classList.remove('active');
@@ -214,11 +234,13 @@ export function initializeAuthUI() {
 
   loginTab.addEventListener('click', () => {
     isLoginMode = true;
+    clearError();
     updateAuthMode();
   });
 
   signupTab.addEventListener('click', () => {
     isLoginMode = false;
+    clearError();
     updateAuthMode();
   });
 

@@ -85,10 +85,16 @@ function clearRecordingSession() {
 // Start recording
 export async function startRecording() {
   try {
+    console.log('[Recording] ===== STARTING RECORDING SESSION =====');
+    console.log('[Recording] Clearing previous session data...');
+    
     // Clear all previous session data
     clearRecordingSession();
     
-    await window.electronAPI.startTranscription();
+    console.log('[Recording] Calling startTranscription...');
+    const result = await window.electronAPI.startTranscription();
+    console.log('[Recording] startTranscription result:', result);
+    console.log('[Recording] Transcription service should now be active');
     
     // Smoothly transition to recording screen
     // Smoothly collapse sidebar
@@ -146,21 +152,27 @@ export async function startRecording() {
     }, 200);
     
     isRecording = true;
+    console.log('[Recording] Setting isRecording = true');
     
     // Clear current note for new recording
     noteStorage.clearCurrentNote();
+    console.log('[Recording] Cleared current note');
     
     // Start wave animations
     startWaveAnimations();
+    console.log('[Recording] Started wave animations');
     
     // Start audio monitoring for the level meters
     startAudioMonitoring();
+    console.log('[Recording] Started audio monitoring');
     
     // Load actual device info now that we have permission
     loadAudioDeviceWithPermission();
+    console.log('[Recording] Loading device info with permission');
     
     // Show settings icon when recording starts
-    elements.settingsIcon.classList.remove('hidden');    
+    elements.settingsIcon.classList.remove('hidden');
+    console.log('[Recording] ===== RECORDING SESSION FULLY STARTED =====');    
   } catch (error) {
     console.error('Failed to start transcription:', error);
     alert(`Error starting recording: ${error.message}`);

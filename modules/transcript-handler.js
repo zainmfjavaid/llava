@@ -7,11 +7,14 @@ let lastEndTime = 0;             // Track when the last segment ended
 
 // Handle Deepgram transcription results
 export function handleTranscriptionResult(data) {
+  console.log('[Transcript Handler] Received transcription data:', JSON.stringify(data, null, 2));
+  
   if (data.channel && data.channel.alternatives && data.channel.alternatives.length > 0) {
     const alternative = data.channel.alternatives[0];
     const transcript = alternative.transcript;
     
     if (transcript && transcript.trim().length > 0) {
+      console.log(`[Transcript Handler] Processing transcript: "${transcript}" (is_final: ${data.is_final})`);
       // Get timing information
       const segmentStart = data.start || 0;
       const segmentDuration = data.duration || 0;
@@ -80,10 +83,54 @@ export function handleTranscriptionResult(data) {
   }
 }
 
-// Handle transcription errors
+// Handle transcription errors with enhanced Windows-specific guidance
 export function handleTranscriptionError(error) {
-  console.error('[Renderer] Transcription error:', error);
-  alert(`Transcription error: ${error.message || error}`);
+  console.error('[Transcript Handler] Transcription error:', error);
+  console.error('[Transcript Handler] Error type:', typeof error);
+  console.error('[Transcript Handler] Error details:', JSON.stringify(error, null, 2));
+  
+  let errorMessage = error.message || error.toString();
+  let userFriendlyMessage = errorMessage;
+  
+  // Provide Windows-specific guidance for common issues
+  if (typeof window !== 'undefined' && window.navigator && window.navigator.platform) {
+    const isWindows = window.navigator.platform.toLowerCase().includes('win');
+    
+    if (isWindows) {
+      if (errorMessage.toLowerCase().includes('no audio data') || 
+          errorMessage.toLowerCase().includes('device not found') ||
+          errorMessage.toLowerCase().includes('cannot find')) {
+        userFriendlyMessage = 'Microphone not accessible on Windows.\n\n' +
+          'Please try the following steps:\n' +
+          '1. Check Windows microphone privacy settings\n' +
+          '2. Ensure your microphone is properly connected\n' +
+          '3. Try running the application as administrator\n' +
+          '4. Update your audio drivers\n' +
+          '5. Test your microphone in other applications first\n\n' +
+          'Original error: ' + errorMessage;
+      } else if (errorMessage.toLowerCase().includes('permission') || 
+                 errorMessage.toLowerCase().includes('access denied')) {
+        userFriendlyMessage = 'Microphone permission denied on Windows.\n\n' +
+          'To fix this:\n' +
+          '1. Open Windows Settings > Privacy & Security > Microphone\n' +
+          '2. Enable "Allow apps to access your microphone"\n' +
+          '3. Enable access for this application\n' +
+          '4. Restart the application\n\n' +
+          'Original error: ' + errorMessage;
+      } else if (errorMessage.toLowerCase().includes('connection') || 
+                 errorMessage.toLowerCase().includes('timeout')) {
+        userFriendlyMessage = 'Connection issue with transcription service.\n\n' +
+          'This may be due to:\n' +
+          '1. Network connectivity issues\n' +
+          '2. Firewall blocking the connection\n' +
+          '3. Windows Defender or antivirus interference\n' +
+          '4. Temporary service unavailability\n\n' +
+          'Try restarting the recording. Original error: ' + errorMessage;
+      }
+    }
+  }
+  
+  alert(`Transcription error: ${userFriendlyMessage}`);
 }
 
 // Auto-scroll detection for transcript
