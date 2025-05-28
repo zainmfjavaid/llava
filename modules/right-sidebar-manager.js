@@ -237,6 +237,31 @@ class RightSidebarManager {
     }
   }
 
+  async sendVibeMessage() {
+    if (this.isStreaming) return;
+
+    // Hide empty state
+    if (this.qaEmptyState) {
+      this.qaEmptyState.style.display = 'none';
+    }
+
+    this.isStreaming = true;
+
+    try {
+      // Add vibe AI message placeholder
+      const vibeMessageElement = this.addVibeMessage('');
+      
+      // Stream vibe response
+      await this.streamVibeResponse(vibeMessageElement);
+      
+    } catch (error) {
+      console.error('Error sending vibe message:', error);
+      this.addErrorMessage(error.message || 'Failed to get vibe response');
+    } finally {
+      this.isStreaming = false;
+    }
+  }
+
   addUserMessage(message) {
     const messageElement = document.createElement('div');
     messageElement.className = 'qa-message user';
@@ -254,6 +279,22 @@ class RightSidebarManager {
   addAIMessage(message, isComplete = false) {
     const messageElement = document.createElement('div');
     messageElement.className = 'qa-message ai';
+    
+    const copyButton = isComplete ? this.createCopyButton() : '';
+    messageElement.innerHTML = `
+      <div class="qa-message-content">${message}</div>
+      ${copyButton}
+    `;
+    
+    this.qaMessages.appendChild(messageElement);
+    this.scrollToBottom();
+    
+    return messageElement;
+  }
+
+  addVibeMessage(message, isComplete = false) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'qa-message ai vibe';
     
     const copyButton = isComplete ? this.createCopyButton() : '';
     messageElement.innerHTML = `
@@ -343,7 +384,89 @@ class RightSidebarManager {
     }
   }
 
+  async streamVibeResponse(messageElement) {
+    if (!messageElement) return;
+    
+    try {
+      let response;
+      
+      if (this.currentNoteId) {
+        // Use saved note
+        response = await APIClient.sendVibeQAStream(this.currentNoteId);
+      } else {
+        // Gather live transcript data
+        const liveData = this.gatherLiveTranscriptData();
+        response = await APIClient.sendVibeQAStream(null, liveData);
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      let content = '';
+      const contentElement = messageElement.querySelector('.qa-message-content');
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'done') {
+                this.finalizeVibeMessage(contentElement, content);
+                return;
+              } else if (data.content) {
+                content += data.content;
+                const rendered = this.renderMarkdown(content);
+                contentElement.innerHTML = rendered;
+                this.scrollToBottom();
+              }
+            } catch (e) {
+              // Ignore JSON parse errors
+            }
+          }
+        }
+      }
+      
+      // Fallback finalization
+      this.finalizeVibeMessage(contentElement, content);
+      
+    } catch (error) {
+      console.error('Vibe streaming error:', error);
+      const contentElement = messageElement.querySelector('.qa-message-content');
+      if (contentElement) {
+        contentElement.innerHTML = `<span style="color: #dc3545;">Error: ${this.escapeHtml(error.message)}</span>`;
+      }
+    }
+  }
+
   finalizeAIMessage(contentElement, content) {
+    if (contentElement) {
+      const renderedContent = this.renderMarkdown(content);
+      contentElement.innerHTML = renderedContent;
+      
+      // Add copy button
+      const messageElement = contentElement.closest('.qa-message');
+      if (messageElement && !messageElement.querySelector('.qa-copy-btn')) {
+        const copyButton = this.createCopyButton();
+        messageElement.insertAdjacentHTML('beforeend', copyButton);
+        
+        const copyBtn = messageElement.querySelector('.qa-copy-btn');
+        if (copyBtn) {
+          this.setupCopyButton(copyBtn, content);
+        }
+      }
+      
+      this.scrollToBottom();
+    }
+  }
+
+  finalizeVibeMessage(contentElement, content) {
     if (contentElement) {
       const renderedContent = this.renderMarkdown(content);
       contentElement.innerHTML = renderedContent;

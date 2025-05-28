@@ -151,6 +151,11 @@ export async function startRecording() {
     // Clear current note for new recording
     noteStorage.clearCurrentNote();
     
+    // Show Vibe button while recording
+    if (elements.vibeBtn) {
+      elements.vibeBtn.style.display = 'inline-block';
+    }
+    
     // Start wave animations
     startWaveAnimations();
     
@@ -230,6 +235,11 @@ export async function stopRecording() {
     }
     updateSeparatorVisibility();
     
+    // Hide Vibe button when recording stops
+    if (elements.vibeBtn) {
+      elements.vibeBtn.style.display = 'none';
+    }
+    
     // Replace stop button with resume text
     elements.stopBtn.style.display = 'none';
     const resumeText = document.createElement('span');
@@ -254,6 +264,11 @@ export async function resumeRecording() {
   try {
     await window.electronAPI.startTranscription();
     isRecording = true;
+    
+    // Show Vibe button again
+    if (elements.vibeBtn) {
+      elements.vibeBtn.style.display = 'inline-block';
+    }
     
     // Start wave animations again
     startWaveAnimations();
@@ -282,6 +297,14 @@ export async function resumeRecording() {
   }
 }
 
+// Handle vibe button click
+async function handleVibeClick() {
+  // Trigger vibe QA in the right sidebar
+  if (rightSidebarManager.isVisible) {
+    await rightSidebarManager.sendVibeMessage();
+  }
+}
+
 // Get recording state
 export function getIsRecording() {
   return isRecording;
@@ -291,6 +314,7 @@ export function getIsRecording() {
 export function initializeRecordingControls() {
   elements.recordBtn.addEventListener('click', startRecording);
   elements.stopBtn.addEventListener('click', stopRecording);
+  elements.vibeBtn.addEventListener('click', handleVibeClick);
   
   // Auto-focus title input when recording screen appears
   const observer = new MutationObserver((mutations) => {

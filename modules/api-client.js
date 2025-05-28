@@ -232,4 +232,41 @@ export class APIClient {
 
     return response;
   }
+
+  static async sendVibeQAStream(noteId, liveData = null) {
+    const user = authManager.getCurrentUser();
+    if (!user && !noteId) throw new Error('User not authenticated');
+
+    let requestBody;
+    
+    if (noteId) {
+      // Saved note mode
+      requestBody = {
+        note_id: noteId,
+      };
+    } else {
+      // Live transcript mode
+      requestBody = {
+        transcript: liveData?.transcript || '',
+        notes: liveData?.notes || '',
+        title: liveData?.title || 'Live Recording',
+        user_id: user.id,
+      };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/vibe-qa-stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to send vibe QA request');
+    }
+
+    return response;
+  }
 }

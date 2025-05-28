@@ -168,7 +168,6 @@ h1 {
     color: var(--text-dark-color);
     background: transparent;
     margin: 1rem 0 0 0;
-    padding: 0.5rem 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     resize: none;
     overflow: hidden;
@@ -282,6 +281,12 @@ h1 {
     transition: color 0.3s ease;
 }
 
+/* Ensure all descendants of user-modified elements also switch to dark color */
+.generated-notes .user-modified,
+.generated-notes .user-modified * {
+    color: var(--text-dark-color) !important;
+}
+
 /* Ensure newly typed content in notes is black */
 .notes-display > *:not(.generated-notes) {
     color: var(--text-dark-color);
@@ -328,7 +333,7 @@ h1 {
 }
 
 .generated-notes h3::first-letter {
-    color: rgba(204, 207, 215, 1);
+    color: inherit;
 }
 
 .generated-notes strong {

@@ -475,6 +475,15 @@
     word-break: break-word;
 }
 
+.qa-message.ai.vibe .qa-message-content {
+    background: rgba(116, 131, 242, 0.2);
+    color: var(--text-dark-color);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    border: none;
+    word-break: break-word;
+}
+
 /* Markdown styling for QA messages */
 .qa-message.ai .qa-message-content hr {
     margin: 1rem 0;
@@ -520,6 +529,10 @@
 
 .qa-message.ai .qa-message-content li {
     margin: 0.25rem 0;
+}
+
+.qa-message.ai .qa-message-content p {
+    margin: 1rem 0;
 }
 
 .qa-message.ai .qa-message-content .table-wrapper {
@@ -661,6 +674,34 @@
 .qa-send-btn svg {
     width: 14px;
     height: 14px;
+}
+
+/* Vibe button */
+.qa-vibe-btn {
+    display: none; /* shown only while recording */
+    margin: 0 25px 10px 25px; /* align with padding of input container */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 0.5rem 1.25rem;
+    font-family: var(--font-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-end;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.qa-vibe-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.qa-vibe-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
 }
 
 /* Copy button for QA messages */

@@ -18,7 +18,8 @@ export const elements = {
   copyIcon: document.getElementById('copyIcon'),
   scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
   generateNotesBtn: document.getElementById('generateNotesBtn'),
-  separator: document.getElementById('separator')
+  separator: document.getElementById('separator'),
+  vibeBtn: document.getElementById('vibeBtn')
 };
 
 // Auto-resize title input
