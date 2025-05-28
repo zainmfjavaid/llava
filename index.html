@@ -273,6 +273,46 @@
               </div>
             </div>
           </div>
+          
+          <!-- Right Sidebar for Q&A -->
+          <div class="right-sidebar" id="rightSidebar">
+            <div class="right-sidebar-header">
+              <h3>Q&A</h3>
+              <button class="right-sidebar-toggle" id="rightSidebarToggle">
+                <!-- Collapse SVG (shown when expanded) -->
+                <svg class="right-sidebar-shrink" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M15 10C15 9.85913 14.9406 9.72479 14.8363 9.63003L9.33634 4.63003C9.13201 4.44428 8.81578 4.45933 8.63003 4.66366C8.44428 4.86799 8.45934 5.18422 8.66366 5.36997L13.2067 9.5L2.5 9.5C2.22386 9.5 2 9.72386 2 10C2 10.2761 2.22386 10.5 2.5 10.5L13.2067 10.5L8.66366 14.63C8.45934 14.8158 8.44428 15.132 8.63003 15.3363C8.81578 15.5407 9.13201 15.5557 9.33634 15.37L14.8363 10.37C14.9406 10.2752 15 10.1409 15 10Z"/>
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M17.5 2C17.7761 2 18 2.22386 18 2.5L18 17.5C18 17.7761 17.7761 18 17.5 18C17.2239 18 17 17.7761 17 17.5L17 2.5C17 2.22386 17.2239 2 17.5 2Z"/>
+                </svg>
+                <!-- Expand SVG (shown when collapsed) -->
+                <svg class="right-sidebar-expand" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 2C2.22386 2 2 2.5 2 2.5V17.5C2 17.7761 2.22386 18 2.5 18C2.77614 18 3 17.7761 3 17.5V2.5C3 2.22386 2.77614 2 2.5 2ZM11.37 4.66366C11.1842 4.45933 10.868 4.44428 10.6637 4.63003L5.16366 9.63003C5.05943 9.72479 5 9.85913 5 10C5 10.1409 5.05943 10.2752 5.16366 10.37L10.6637 15.37C10.868 15.5557 11.1842 15.5407 11.37 15.3363C11.5557 15.132 11.5407 14.8158 11.3363 14.63L6.7933 10.5L17.5 10.5C17.7761 10.5 18 10.2761 18 10C18 9.72386 17.7761 9.5 17.5 9.5L6.7933 9.5L11.3363 5.36997C11.5407 5.18422 11.5557 4.86799 11.37 4.66366Z"/>
+                </svg>
+              </button>
+            </div>
+            
+            <div class="right-sidebar-content">
+              <div class="qa-messages" id="qaMessages">
+                <div class="qa-empty-state">
+                  <p>Ask questions about this transcript</p>
+                </div>
+              </div>
+              
+              <div class="qa-input-container">
+                <textarea 
+                  id="qaInput" 
+                  class="qa-input" 
+                  placeholder="Ask about this transcript..."
+                  rows="2"
+                ></textarea>
+                <button class="qa-send-btn" id="qaSendBtn" style="margin-bottom: 4px;" disabled>
+                  <svg width="16" height="15" viewBox="0 0 16 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.70711 0.292893C8.31658 -0.0976315 7.68342 -0.0976314 7.29289 0.292893L0.928932 6.65686C0.538407 7.04738 0.538407 7.68054 0.928932 8.07107C1.31946 8.46159 1.95262 8.46159 2.34315 8.07107L8 2.41421L13.6569 8.07107C14.0474 8.46159 14.6805 8.46159 15.0711 8.07107C15.4616 7.68054 15.4616 7.04738 15.0711 6.65685L8.70711 0.292893ZM9 15L9 1L7 1L7 15L9 15Z" fill="white"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

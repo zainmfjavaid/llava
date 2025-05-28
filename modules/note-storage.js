@@ -24,6 +24,16 @@ class NoteStorage {
 
       const savedNote = await APIClient.createNote(noteData);
       this.currentNote = savedNote;
+      
+      // Update right sidebar with new note ID
+      if (window.rightSidebarManager) {
+        window.rightSidebarManager.setCurrentNote(savedNote.id);
+      }
+      
+      // Update global reference
+      window.currentNoteId = savedNote.id;
+      window.currentNote = savedNote;
+      
       return savedNote;
     } catch (error) {
       console.error('Failed to create note:', error);

@@ -23,21 +23,15 @@ export const elements = {
 
 // Auto-resize title input
 export function autoResizeTitle() {
-  const currentHeight = elements.titleInput.style.height;
-  const newHeight = elements.titleInput.scrollHeight + 'px';
+  // Store cursor position before resizing
+  const start = elements.titleInput.selectionStart;
+  const end = elements.titleInput.selectionEnd;
   
-  // Only adjust if height actually needs to change
-  if (currentHeight !== newHeight) {
-    // Store cursor position before resizing
-    const start = elements.titleInput.selectionStart;
-    const end = elements.titleInput.selectionEnd;
-    
-    elements.titleInput.style.height = 'auto';
-    elements.titleInput.style.height = newHeight;
-    
-    // Restore cursor position after resizing
-    elements.titleInput.setSelectionRange(start, end);
-  }
+  elements.titleInput.style.height = 'auto';
+  elements.titleInput.style.height = elements.titleInput.scrollHeight + 'px';
+  
+  // Restore cursor position after resizing
+  elements.titleInput.setSelectionRange(start, end);
 }
 
 // Helper function to check if title field is empty

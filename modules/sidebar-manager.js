@@ -4,6 +4,7 @@ import { authManager } from './auth-manager.js';
 import { setTranscript } from './transcript-handler.js';
 import { clearTranscript } from './transcript-handler.js';
 import { resetNotesGenerationState } from './notes-processor.js';
+import { rightSidebarManager } from './right-sidebar-manager.js';
 
 class SidebarManager {
   constructor() {
@@ -538,6 +539,11 @@ class SidebarManager {
     // Store current note data for future operations
     window.currentNoteId = note.id;
     window.currentNote = note;
+    
+    // Initialize and show right sidebar for Q&A
+    rightSidebarManager.initialize();
+    rightSidebarManager.setCurrentNote(note.id);
+    rightSidebarManager.showSidebar(note.id);
   }
 
   // Refresh notes list (useful after creating/deleting notes)

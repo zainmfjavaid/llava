@@ -2,7 +2,7 @@
 import { authManager, authenticatedFetch } from './auth-manager.js';
 
 // Toggle production vs development API endpoint
-const is_production = true; // set to true in production builds
+const is_production = false; // set to true in production builds
 const API_BASE_URL = is_production
   ? 'https://api.llava.io/v1'
   : 'http://localhost:9000/v1';
@@ -187,6 +187,47 @@ export class APIClient {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to send chat message');
+    }
+
+    return response;
+  }
+
+  static async sendSingleNoteQAStream(question, noteId, chatHistory = [], liveData = null) {
+    const user = authManager.getCurrentUser();
+    if (!user && !noteId) throw new Error('User not authenticated');
+
+    let requestBody;
+    
+    if (noteId) {
+      // Saved note mode
+      requestBody = {
+        note_id: noteId,
+        question,
+        chat_history: chatHistory,
+      };
+    } else {
+      // Live transcript mode
+      requestBody = {
+        transcript: liveData?.transcript || '',
+        notes: liveData?.notes || '',
+        title: liveData?.title || 'Live Recording',
+        user_id: user.id,
+        question,
+        chat_history: chatHistory,
+      };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/single-note-qa-stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to send single note QA message');
     }
 
     return response;

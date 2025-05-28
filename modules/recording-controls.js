@@ -5,6 +5,7 @@ import { getCurrentTranscript, clearTranscript } from './transcript-handler.js';
 import { APIClient } from './api-client.js';
 import { authManager } from './auth-manager.js';
 import { noteStorage } from './note-storage.js';
+import { rightSidebarManager } from './right-sidebar-manager.js';
 
 // Helper function to extract raw notes with line breaks preserved
 function extractRawNotes() {
@@ -160,7 +161,12 @@ export async function startRecording() {
     loadAudioDeviceWithPermission();
     
     // Show settings icon when recording starts
-    elements.settingsIcon.classList.remove('hidden');    
+    elements.settingsIcon.classList.remove('hidden');
+    
+    // Initialize and show right sidebar for new recording
+    rightSidebarManager.initialize();
+    rightSidebarManager.setCurrentNote(null); // No note ID yet for new recording
+    rightSidebarManager.showSidebar(null); // Show sidebar in live mode
   } catch (error) {
     console.error('Failed to start transcription:', error);
     alert(`Error starting recording: ${error.message}`);
