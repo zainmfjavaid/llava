@@ -1,7 +1,7 @@
 {
   "name": "llava",
   "productName": "llava",
-  "version": "1.0.54",
+  "version": "1.0.55",
   "description": "AI Meeting Notes",
   "author": "llava",
   "main": "main.js",
@@ -35,7 +35,14 @@
       "extendInfo": {
         "NSMicrophoneUsageDescription": "This app needs microphone access to transcribe your meetings and conversations.",
         "NSSystemAdministrationUsageDescription": "This app needs system audio access to capture audio from your computer for transcription."
-      }
+      },
+      "extraResources": [
+        ".env",
+        {
+          "from": "node_modules/ffmpeg-static/ffmpeg",
+          "to": "ffmpeg"
+        }
+      ]
     },
     "dmg": {
       "background": "images/blue_noise.jpg",
@@ -49,7 +56,14 @@
         "nsis",
         "zip"
       ],
-      "icon": "images/icon.ico"
+      "icon": "images/icon.ico",
+      "extraResources": [
+        ".env",
+        {
+          "from": "binaries/win/ffmpeg.exe",
+          "to": "ffmpeg.exe"
+        }
+      ]
     },
     "publish": [
       {
@@ -59,17 +73,7 @@
         "releaseType": "release"
       }
     ],
-    "afterSign": "build/notarize.js",
-    "extraResources": [
-      ".env",
-      {
-        "from": "node_modules/ffmpeg-static/",
-        "to": ".",
-        "filter": [
-          "ffmpeg.exe"
-        ]
-      }
-    ]
+    "afterSign": "build/notarize.js"
   },
   "dependencies": {
     "@deepgram/sdk": "^4.2.0",

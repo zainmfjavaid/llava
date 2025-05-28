@@ -5,3 +5,4 @@ node_modules
 build-llava.sh
 out/
 dist/
+build-mac.sh
