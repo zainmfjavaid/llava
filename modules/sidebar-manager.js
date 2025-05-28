@@ -35,18 +35,36 @@ class SidebarManager {
     if (sidebar) {
       const collapsed = localStorage.getItem('sidebar-collapsed-initial') === 'true';
       sidebar.classList.toggle('collapsed', collapsed);
+      const shrinkIcon = document.getElementById('sidebar-toggle-shrink');
+      const expandIcon = document.getElementById('sidebar-toggle-expand');
+      if (shrinkIcon && expandIcon) {
+        shrinkIcon.style.display = collapsed ? 'none' : 'block';
+        expandIcon.style.display = collapsed ? 'block' : 'none';
+      }
     }
     // Recording screen
     const sidebarRecording = document.querySelector('.recording-screen .sidebar');
     if (sidebarRecording) {
       const collapsed = localStorage.getItem('sidebar-collapsed-recording') === 'true';
       sidebarRecording.classList.toggle('collapsed', collapsed);
+      const shrinkIconRecording = document.getElementById('sidebar-toggle-shrink-recording');
+      const expandIconRecording = document.getElementById('sidebar-toggle-expand-recording');
+      if (shrinkIconRecording && expandIconRecording) {
+        shrinkIconRecording.style.display = collapsed ? 'none' : 'block';
+        expandIconRecording.style.display = collapsed ? 'block' : 'none';
+      }
     }
     // Chat screen
     const sidebarChat = document.querySelector('.chat-screen .sidebar');
     if (sidebarChat) {
       const collapsed = localStorage.getItem('sidebar-collapsed-chat') === 'true';
       sidebarChat.classList.toggle('collapsed', collapsed);
+      const shrinkIconChat = document.getElementById('sidebar-toggle-shrink-chat');
+      const expandIconChat = document.getElementById('sidebar-toggle-expand-chat');
+      if (shrinkIconChat && expandIconChat) {
+        shrinkIconChat.style.display = collapsed ? 'none' : 'block';
+        expandIconChat.style.display = collapsed ? 'block' : 'none';
+      }
     }
   }
 
@@ -402,6 +420,9 @@ class SidebarManager {
       recordingControls.classList.remove('transcript-open');
     }
 
+    // Reset the generate notes button state before configuring for the new note
+    resetNotesGenerationState();
+
     // Set the current note ID for proper backend integration
     await setCurrentNoteId(note.id);
 
@@ -479,8 +500,12 @@ class SidebarManager {
         }
       }
       
-      // Show generate notes button
-      if (generateNotesBtn) generateNotesBtn.style.display = 'flex';
+      // Show generate notes button if transcript is not empty
+      if (generateNotesBtn && note.transcript && note.transcript.trim().length > 0) {
+        generateNotesBtn.style.display = 'flex';
+      } else if (generateNotesBtn) {
+        generateNotesBtn.style.display = 'none';
+      }
       
       // Hide stop button and show resume text
       if (stopBtn) stopBtn.style.display = 'none';

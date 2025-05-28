@@ -139,17 +139,13 @@
     background-color: rgba(102, 126, 234, 0.1);
 }
 
-.audio-visualizer::after {
-    content: '▲';
+.audio-visualizer-carat {
     margin-left: 6px;
-    font-size: 10px;
     color: #718096;
     transition: transform 0.1s ease;
-    display: inline-block;
-    line-height: 1;
 }
 
-.recording-controls.transcript-open .audio-visualizer::after {
+.recording-controls.transcript-open .audio-visualizer-carat {
     transform: rotate(180deg);
 }
 
