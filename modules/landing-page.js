@@ -51,16 +51,18 @@ export async function smoothNavigateHome() {
   const initialScreen = document.getElementById('initialScreen');
   const recordingScreen = document.getElementById('recordingScreen');
   const chatScreen = document.getElementById('chatScreen');
+  const contextDumpScreen = document.getElementById('contextDumpScreen');
   
   // Expand sidebar smoothly
-  const sidebar = document.querySelector('.recording-screen .sidebar, .chat-screen .sidebar, .initial-screen .sidebar');
+  const sidebar = document.querySelector('.recording-screen .sidebar, .chat-screen .sidebar, .context-dump-screen .sidebar, .initial-screen .sidebar');
   if (sidebar && sidebar.classList.contains('collapsed')) {
     sidebarManager.expandSidebar(sidebar, 'sidebar-toggle-shrink', 'sidebar-toggle-expand');
   }
   
   // Setup crossfade transition back to home
   const currentScreen = recordingScreen && recordingScreen.style.display !== 'none' ? recordingScreen : 
-                       chatScreen && chatScreen.style.display !== 'none' ? chatScreen : null;
+                       chatScreen && chatScreen.style.display !== 'none' ? chatScreen :
+                       contextDumpScreen && contextDumpScreen.style.display !== 'none' ? contextDumpScreen : null;
   
   if (currentScreen && initialScreen) {
     // Position initial screen on top with opacity 0
@@ -121,8 +123,10 @@ export function initializeSidebarHomeButtons() {
   const homeBtn = document.getElementById('homeBtn');
   const homeBtnRecording = document.getElementById('homeBtnRecording');
   const homeBtnChat = document.getElementById('homeBtnChat');
+  const homeBtnContext = document.getElementById('homeBtnContext');
   const backToHomeBtn = document.getElementById('backToHomeBtn');
   const backToHomeBtnChat = document.getElementById('backToHomeBtnChat');
+  const backToHomeBtnContext = document.getElementById('backToHomeBtnContext');
   
   // Function to navigate to home screen
   const navigateToHome = async () => {
@@ -143,11 +147,17 @@ export function initializeSidebarHomeButtons() {
   if (homeBtnChat) {
     homeBtnChat.addEventListener('click', navigateToHome);
   }
+  if (homeBtnContext) {
+    homeBtnContext.addEventListener('click', navigateToHome);
+  }
   if (backToHomeBtn) {
     backToHomeBtn.addEventListener('click', navigateToHome);
   }
   if (backToHomeBtnChat) {
     backToHomeBtnChat.addEventListener('click', navigateToHome);
+  }
+  if (backToHomeBtnContext) {
+    backToHomeBtnContext.addEventListener('click', navigateToHome);
   }
   
   // Initialize active states
@@ -168,9 +178,11 @@ export function updateHomeButtonStates() {
   const homeBtn = document.getElementById('homeBtn');
   const homeBtnRecording = document.getElementById('homeBtnRecording');
   const homeBtnChat = document.getElementById('homeBtnChat');
+  const homeBtnContext = document.getElementById('homeBtnContext');
   const initialScreen = document.getElementById('initialScreen');
   const recordingScreen = document.getElementById('recordingScreen');
   const chatScreen = document.getElementById('chatScreen');
+  const contextDumpScreen = document.getElementById('contextDumpScreen');
   
   // Home is active when:
   // 1. initialScreen is visible (flex or empty string) AND other screens are hidden
@@ -181,8 +193,10 @@ export function updateHomeButtonStates() {
     recordingScreen.style.display === 'none' || recordingScreen.style.display === '';
   const isChatScreenHidden = !chatScreen || 
     chatScreen.style.display === 'none' || chatScreen.style.display === '';
+  const isContextDumpScreenHidden = !contextDumpScreen || 
+    contextDumpScreen.style.display === 'none' || contextDumpScreen.style.display === '';
   
-  const isOnHomeScreen = isInitialScreenVisible && isRecordingScreenHidden && isChatScreenHidden;
+  const isOnHomeScreen = isInitialScreenVisible && isRecordingScreenHidden && isChatScreenHidden && isContextDumpScreenHidden;
   
   if (homeBtn) {
     homeBtn.classList.toggle('active', isOnHomeScreen);
@@ -192,5 +206,8 @@ export function updateHomeButtonStates() {
   }
   if (homeBtnChat) {
     homeBtnChat.classList.toggle('active', isOnHomeScreen);
+  }
+  if (homeBtnContext) {
+    homeBtnContext.classList.toggle('active', isOnHomeScreen);
   }
 }

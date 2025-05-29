@@ -21,6 +21,7 @@ import { initializeSettingsListeners } from './modules/settings-manager.js';
 import { initializeAuthUI } from './modules/auth-ui.js';
 import { authManager } from './modules/auth-manager.js';
 import { initializeSidebarHomeButtons, initializeLandingPage } from './modules/landing-page.js';
+import { initializeContextDump } from './modules/context-dump.js';
 
 // Handle Deepgram transcription results
 window.electronAPI.onTranscriptionResult(handleTranscriptionResult);
@@ -82,6 +83,9 @@ function initializeAppModules() {
   
   // Initialize landing page with chat
   initializeLandingPage();
+  
+  // Initialize context dump functionality
+  initializeContextDump();
   
   appModulesInitialized = true;
 }

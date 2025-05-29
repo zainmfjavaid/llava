@@ -217,6 +217,8 @@ class SidebarManager {
   async loadNotes() {
     const notesSidebar = document.getElementById('notesSidebar');
     const notesSidebarRecording = document.getElementById('notesSidebarRecording');
+    const notesSidebarChat = document.getElementById('notesSidebarChat');
+    const notesSidebarContext = document.getElementById('notesSidebarContext');
 
     try {
       this.notes = await APIClient.getUserNotes();
@@ -232,12 +234,16 @@ class SidebarManager {
       
       if (notesSidebar) notesSidebar.innerHTML = errorHtml;
       if (notesSidebarRecording) notesSidebarRecording.innerHTML = errorHtml;
+      if (notesSidebarChat) notesSidebarChat.innerHTML = errorHtml;
+      if (notesSidebarContext) notesSidebarContext.innerHTML = errorHtml;
     }
   }
 
   displayNotes() {
     const notesSidebar = document.getElementById('notesSidebar');
     const notesSidebarRecording = document.getElementById('notesSidebarRecording');
+    const notesSidebarChat = document.getElementById('notesSidebarChat');
+    const notesSidebarContext = document.getElementById('notesSidebarContext');
 
     if (this.notes.length === 0) {
       const emptyHtml = `
@@ -248,6 +254,8 @@ class SidebarManager {
       
       if (notesSidebar) notesSidebar.innerHTML = emptyHtml;
       if (notesSidebarRecording) notesSidebarRecording.innerHTML = emptyHtml;
+      if (notesSidebarChat) notesSidebarChat.innerHTML = emptyHtml;
+      if (notesSidebarContext) notesSidebarContext.innerHTML = emptyHtml;
       return;
     }
 
@@ -278,9 +286,11 @@ class SidebarManager {
       `;
     });
 
-    // Update both sidebar instances
+    // Update all sidebar instances
     if (notesSidebar) notesSidebar.innerHTML = html;
     if (notesSidebarRecording) notesSidebarRecording.innerHTML = html;
+    if (notesSidebarChat) notesSidebarChat.innerHTML = html;
+    if (notesSidebarContext) notesSidebarContext.innerHTML = html;
   }
 
   groupNotesByDate(notes) {
