@@ -297,8 +297,9 @@ class RightSidebarManager {
     messageElement.className = 'qa-message ai';
     
     const copyButton = isComplete ? this.createCopyButton() : '';
+    const content = message || this.createThinkingDots();
     messageElement.innerHTML = `
-      <div class="qa-message-content">${message}</div>
+      <div class="qa-message-content">${content}</div>
       ${copyButton}
     `;
     
@@ -313,8 +314,9 @@ class RightSidebarManager {
     messageElement.className = 'qa-message ai vibe';
     
     const copyButton = isComplete ? this.createCopyButton() : '';
+    const content = message || this.createThinkingDots();
     messageElement.innerHTML = `
-      <div class="qa-message-content">${message}</div>
+      <div class="qa-message-content">${content}</div>
       ${copyButton}
     `;
     
@@ -519,6 +521,16 @@ class RightSidebarManager {
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code>$1</code>')
       .replace(/\n/g, '<br>');
+  }
+
+  createThinkingDots() {
+    return `
+      <div class="qa-thinking-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    `;
   }
 
   createCopyButton() {

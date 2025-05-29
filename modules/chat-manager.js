@@ -473,8 +473,9 @@ class ChatManager {
     messageElement.className = 'chat-message ai-message';
     
     const copyButton = isComplete ? this.createCopyButton() : '';
+    const content = message || this.createThinkingDots();
     messageElement.innerHTML = `
-      <div class="message-content">${message}</div>
+      <div class="message-content">${content}</div>
       ${copyButton}
     `;
     
@@ -632,6 +633,16 @@ class ChatManager {
     const withCitations = withNoteCitations.replace(/\[(\d+)\]/g, '<span class="citation">$1</span>');
     // Add chat-link class to <a> tags
     return withCitations.replace(/<a /g, '<a class="chat-link" ');
+  }
+
+  createThinkingDots() {
+    return `
+      <div class="thinking-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    `;
   }
 
   createCopyButton() {
