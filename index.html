@@ -241,8 +241,15 @@
                 </div>
 
                 <button class="continue-btn" id="contextContinueBtn">
-                  <span>Continue</span>
-                  <svg viewBox="0 0 24 24" fill="currentColor">
+                  <span class="continue-text">Continue</span>
+                  <span class="continue-loading visually-hidden">
+                    <svg class="spinner" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.2"/>
+                      <path d="M4 12a8 8 0 018-8V2.5a.5.5 0 011 0V4a8 8 0 11-8 8z" fill="currentColor"/>
+                    </svg>
+                    Feeling the vibes...
+                  </span>
+                  <svg class="continue-arrow" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
                   </svg>
                 </button>

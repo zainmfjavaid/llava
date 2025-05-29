@@ -247,7 +247,12 @@ export async function showContextDumpScreen() {
 
 // Handle continue button click - transition to recording screen
 async function handleContinueFromContextDump() {
+  const continueBtn = document.getElementById('contextContinueBtn');
+  
   try {
+    // Show loading state
+    showLoadingState(continueBtn);
+    
     // Collect current form data
     const contextData = getFormData();
     
@@ -270,6 +275,9 @@ async function handleContinueFromContextDump() {
     console.log('Created note with context:', newNote);
     console.log('Context data sent:', contextData);
     
+    // Hide loading state before navigation
+    hideLoadingState(continueBtn);
+    
     // Navigate to recording screen
     await showRecordingScreenFromContextDump();
     
@@ -289,6 +297,7 @@ async function handleContinueFromContextDump() {
     }, 500);
   } catch (error) {
     console.error('Failed to create note with context:', error);
+    hideLoadingState(continueBtn);
     alert('Failed to process context data. Please try again.');
   }
 }
@@ -299,12 +308,7 @@ function getFormData() {
   
   return {
     notes: contextNotes ? contextNotes.value.trim() : '',
-    files: uploadedFiles.map(file => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: file.lastModified
-    }))
+    files: uploadedFiles // Pass the actual File objects for upload
   };
 }
 
@@ -377,6 +381,28 @@ export function clearContextData() {
   // Clear form fields
   const contextNotes = document.getElementById('contextNotes');
   if (contextNotes) contextNotes.value = '';
+}
+
+// Show loading state on button
+function showLoadingState(button) {
+  if (button) {
+    button.classList.add('loading');
+    const loadingEl = button.querySelector('.continue-loading');
+    if (loadingEl) {
+      loadingEl.classList.remove('visually-hidden');
+    }
+  }
+}
+
+// Hide loading state on button
+function hideLoadingState(button) {
+  if (button) {
+    button.classList.remove('loading');
+    const loadingEl = button.querySelector('.continue-loading');
+    if (loadingEl) {
+      loadingEl.classList.add('visually-hidden');
+    }
+  }
 }
 
 // Get current context data (for external use)

@@ -104,10 +104,14 @@ export async function authenticatedFetch(url, options = {}) {
     throw new Error('User not authenticated');
   }
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  // Don't set Content-Type for FormData, let the browser set it with boundary
+  const headers = {};
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  // Merge with any existing headers
+  Object.assign(headers, options.headers);
 
   return fetch(url, {
     ...options,

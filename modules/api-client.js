@@ -30,12 +30,22 @@ export class APIClient {
   }
 
   static async createNoteWithContext(userId, contextData) {
+    // Create FormData to handle file uploads
+    const formData = new FormData();
+    formData.append('user_id', userId);
+    formData.append('notes', contextData.notes || '');
+    
+    // Add files if they exist
+    if (contextData.files && contextData.files.length > 0) {
+      contextData.files.forEach(file => {
+        formData.append('files', file);
+      });
+    }
+
     const response = await authenticatedFetch(`${API_BASE_URL}/notes/context`, {
       method: 'POST',
-      body: JSON.stringify({
-        user_id: userId,
-        context: contextData,
-      }),
+      body: formData,
+      // Don't set Content-Type header, let the browser set it with boundary
     });
 
     if (!response.ok) {
