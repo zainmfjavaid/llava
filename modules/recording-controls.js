@@ -156,6 +156,11 @@ export async function startRecording() {
       elements.vibeBtn.style.display = 'inline-block';
     }
     
+    // Show Vibe button in right sidebar while recording
+    if (elements.qaVibeBtn) {
+      elements.qaVibeBtn.style.display = 'block';
+    }
+    
     // Start wave animations
     startWaveAnimations();
     
@@ -240,6 +245,11 @@ export async function stopRecording() {
       elements.vibeBtn.style.display = 'none';
     }
     
+    // Hide Vibe button in right sidebar when recording stops
+    if (elements.qaVibeBtn) {
+      elements.qaVibeBtn.style.display = 'none';
+    }
+    
     // Replace stop button with resume text
     elements.stopBtn.style.display = 'none';
     const resumeText = document.createElement('span');
@@ -268,6 +278,11 @@ export async function resumeRecording() {
     // Show Vibe button again
     if (elements.vibeBtn) {
       elements.vibeBtn.style.display = 'inline-block';
+    }
+    
+    // Show Vibe button in right sidebar again
+    if (elements.qaVibeBtn) {
+      elements.qaVibeBtn.style.display = 'block';
     }
     
     // Start wave animations again
@@ -299,10 +314,13 @@ export async function resumeRecording() {
 
 // Handle vibe button click
 async function handleVibeClick() {
-  // Trigger vibe QA in the right sidebar
-  if (rightSidebarManager.isVisible) {
-    await rightSidebarManager.sendVibeMessage();
+  // Show the right sidebar if it's not visible
+  if (!rightSidebarManager.isVisible) {
+    rightSidebarManager.showSidebar(); // No noteId means live transcript mode
   }
+  
+  // Trigger vibe QA in the right sidebar
+  await rightSidebarManager.sendVibeMessage();
 }
 
 // Get recording state

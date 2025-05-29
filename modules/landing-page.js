@@ -117,6 +117,12 @@ export async function smoothNavigateHome() {
   resetNotesGenerationState(); // Reset notes generation state when navigating home
   // Clear any existing chat history when returning home
   chatManager.clearChat();
+  
+  // Restore vibe button visibility when returning to home
+  const vibeBtn = document.getElementById('vibeBtn');
+  if (vibeBtn) {
+    vibeBtn.style.display = 'inline-flex';
+  }
 }
 
 export function initializeSidebarHomeButtons() {

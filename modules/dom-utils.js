@@ -19,7 +19,8 @@ export const elements = {
   scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
   generateNotesBtn: document.getElementById('generateNotesBtn'),
   separator: document.getElementById('separator'),
-  vibeBtn: document.getElementById('vibeBtn')
+  vibeBtn: document.getElementById('vibeBtn'),
+  qaVibeBtn: document.getElementById('qaVibeBtn')
 };
 
 // Auto-resize title input

@@ -138,6 +138,7 @@ export function clearTranscript() {
 
 // Get current transcript
 export function getCurrentTranscript() {
+  console.log('[DEBUG] getCurrentTranscript() called, returning:', currentTranscript.length, 'characters');
   return currentTranscript;
 }
 

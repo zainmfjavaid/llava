@@ -678,7 +678,7 @@
 
 /* Vibe button */
 .qa-vibe-btn {
-    display: none; /* shown only while recording */
+    display: block; /* shown while recording */
     margin: 0 25px 10px 25px; /* align with padding of input container */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #fff;

@@ -22,6 +22,7 @@ import { initializeAuthUI } from './modules/auth-ui.js';
 import { authManager } from './modules/auth-manager.js';
 import { initializeSidebarHomeButtons, initializeLandingPage } from './modules/landing-page.js';
 import { initializeContextDump } from './modules/context-dump.js';
+import { rightSidebarManager } from './modules/right-sidebar-manager.js';
 
 // Handle Deepgram transcription results
 window.electronAPI.onTranscriptionResult(handleTranscriptionResult);
@@ -86,6 +87,9 @@ function initializeAppModules() {
   
   // Initialize context dump functionality
   initializeContextDump();
+  
+  // Initialize right sidebar manager
+  rightSidebarManager.initialize();
   
   appModulesInitialized = true;
 }

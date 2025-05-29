@@ -247,15 +247,50 @@ export async function showContextDumpScreen() {
 
 // Handle continue button click - transition to recording screen
 async function handleContinueFromContextDump() {
-  // Collect current form data
-  const contextData = getFormData();
-  
-  // TODO: Send context data to backend
-  // This will be implemented when backend communication is added
-  console.log('Context data to be sent to backend:', contextData);
-  
-  // Navigate to recording screen
-  await showRecordingScreenFromContextDump();
+  try {
+    // Collect current form data
+    const contextData = getFormData();
+    
+    // Send context data to backend and create new note
+    const { authManager } = await import('./auth-manager.js');
+    const user = authManager.getCurrentUser();
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    // Create note with context data
+    const { APIClient } = await import('./api-client.js');
+    const newNote = await APIClient.createNoteWithContext(user.id, contextData);
+    
+    // Set the current note ID globally so recording can use it
+    window.currentNoteId = newNote.id;
+    window.currentNote = newNote;
+    
+    console.log('Created note with context:', newNote);
+    console.log('Context data sent:', contextData);
+    
+    // Navigate to recording screen
+    await showRecordingScreenFromContextDump();
+    
+    // Set the current note in the right sidebar manager after screen transition
+    setTimeout(async () => {
+      try {
+        const { rightSidebarManager } = await import('./right-sidebar-manager.js');
+        if (rightSidebarManager) {
+          rightSidebarManager.setCurrentNote(newNote.id);
+          console.log('Set right sidebar current note to:', newNote.id);
+        } else {
+          console.warn('Right sidebar manager not available');
+        }
+      } catch (error) {
+        console.error('Error setting right sidebar note:', error);
+      }
+    }, 500);
+  } catch (error) {
+    console.error('Failed to create note with context:', error);
+    alert('Failed to process context data. Please try again.');
+  }
 }
 
 // Get current form data

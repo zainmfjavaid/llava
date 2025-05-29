@@ -30,6 +30,7 @@ class RightSidebarManager {
     this.qaInput = document.getElementById('qaInput');
     this.qaSendBtn = document.getElementById('qaSendBtn');
     this.rightSidebarToggle = document.getElementById('rightSidebarToggle');
+    this.qaVibeBtn = document.getElementById('qaVibeBtn');
     this.qaEmptyState = this.qaMessages?.querySelector('.qa-empty-state');
 
     if (!this.rightSidebar || !this.qaMessages || !this.qaInput || !this.qaSendBtn) {
@@ -39,6 +40,7 @@ class RightSidebarManager {
 
     this.setupEventListeners();
     this.initTextarea();
+    this.initializeVibeButtonState();
   }
 
   setupEventListeners() {
@@ -60,6 +62,13 @@ class RightSidebarManager {
     this.qaSendBtn.addEventListener('click', () => {
       this.sendMessage();
     });
+
+    // Vibe button
+    if (this.qaVibeBtn) {
+      this.qaVibeBtn.addEventListener('click', () => {
+        this.sendVibeMessage();
+      });
+    }
 
     // Enter key to send
     this.qaInput.addEventListener('keydown', (e) => {
@@ -134,6 +143,13 @@ class RightSidebarManager {
       // Enable/disable send button
       this.qaSendBtn.disabled = this.qaInput.value.trim() === '' || this.isStreaming;
     });
+  }
+
+  initializeVibeButtonState() {
+    // Hide vibe button initially (it will be shown when recording starts)
+    if (this.qaVibeBtn) {
+      this.qaVibeBtn.style.display = 'none';
+    }
   }
 
   showSidebar(noteId = null) {
@@ -390,12 +406,17 @@ class RightSidebarManager {
     try {
       let response;
       
+      // Always gather live transcript data
+      const liveData = this.gatherLiveTranscriptData();
+      console.log('[DEBUG] Gathered live data:', liveData);
+      
       if (this.currentNoteId) {
-        // Use saved note
-        response = await APIClient.sendVibeQAStream(this.currentNoteId);
+        // Use saved note but include live data
+        console.log('[DEBUG] Using saved note ID with live data:', this.currentNoteId);
+        response = await APIClient.sendVibeQAStream(this.currentNoteId, liveData);
       } else {
-        // Gather live transcript data
-        const liveData = this.gatherLiveTranscriptData();
+        // Use only live transcript data
+        console.log('[DEBUG] Sending live data to API:', liveData);
         response = await APIClient.sendVibeQAStream(null, liveData);
       }
       const reader = response.body.getReader();
@@ -567,6 +588,14 @@ class RightSidebarManager {
     }
   }
 
+  // Debug function to test transcript gathering manually
+  testTranscriptGathering() {
+    console.log('[DEBUG] Testing transcript gathering...');
+    const data = this.gatherLiveTranscriptData();
+    console.log('[DEBUG] Test result:', data);
+    return data;
+  }
+
   gatherLiveTranscriptData() {
     // Gather current transcript and notes data from the DOM
     const titleInput = document.getElementById('titleInput');
@@ -603,8 +632,15 @@ class RightSidebarManager {
     
     // Get transcript content - prefer the transcript handler for accuracy
     try {
-      transcript = getCurrentTranscript() || '';
+      if (typeof getCurrentTranscript === 'function') {
+        transcript = getCurrentTranscript() || '';
+        console.log('[DEBUG] Transcript from getCurrentTranscript():', transcript.length, 'characters');
+      } else {
+        console.warn('[DEBUG] getCurrentTranscript is not a function, using DOM fallback');
+        throw new Error('getCurrentTranscript not available');
+      }
     } catch (error) {
+      console.error('[DEBUG] Error getting transcript from handler:', error);
       // Fallback to DOM content if transcript handler fails
       if (transcriptContent) {
         const transcriptClone = transcriptContent.cloneNode(true);
@@ -613,14 +649,26 @@ class RightSidebarManager {
         transcriptClone.querySelectorAll('button, .scroll-to-bottom-btn').forEach(el => el.remove());
         
         transcript = transcriptClone.textContent || '';
+        console.log('[DEBUG] Transcript from DOM fallback:', transcript.length, 'characters');
+      } else {
+        console.error('[DEBUG] No transcriptContent element found');
       }
     }
     
-    return {
+    const result = {
       title: title.trim(),
       notes: notes.trim(),
       transcript: transcript.trim()
     };
+    
+    console.log('[DEBUG] gatherLiveTranscriptData result:', {
+      title: result.title,
+      notesLength: result.notes.length,
+      transcriptLength: result.transcript.length,
+      transcriptPreview: result.transcript.substring(0, 100) + '...'
+    });
+    
+    return result;
   }
 }
 
@@ -629,3 +677,6 @@ export const rightSidebarManager = new RightSidebarManager();
 
 // Make it globally accessible
 window.rightSidebarManager = rightSidebarManager;
+
+// Also expose debug functions globally for testing
+window.debugTranscript = () => rightSidebarManager.testTranscriptGathering();

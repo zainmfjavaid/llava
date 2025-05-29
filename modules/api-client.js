@@ -29,6 +29,23 @@ export class APIClient {
     return await response.json();
   }
 
+  static async createNoteWithContext(userId, contextData) {
+    const response = await authenticatedFetch(`${API_BASE_URL}/notes/context`, {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: userId,
+        context: contextData,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create note with context');
+    }
+
+    return await response.json();
+  }
+
   static async getNote(noteId) {
     const response = await authenticatedFetch(`${API_BASE_URL}/notes/${noteId}`);
     
@@ -240,10 +257,19 @@ export class APIClient {
     let requestBody;
     
     if (noteId) {
-      // Saved note mode
+      // Saved note mode - still send live data if available
       requestBody = {
         note_id: noteId,
       };
+      
+      // If we have live data, include it in the request
+      if (liveData) {
+        requestBody.transcript = liveData.transcript || '';
+        requestBody.notes = liveData.notes || '';
+        requestBody.title = liveData.title || '';
+      }
+      
+      console.log('[DEBUG] Vibe API request (saved note):', requestBody);
     } else {
       // Live transcript mode
       requestBody = {
@@ -252,6 +278,16 @@ export class APIClient {
         title: liveData?.title || 'Live Recording',
         user_id: user.id,
       };
+      console.log('[DEBUG] Vibe API request (live data):', {
+        ...requestBody,
+        transcript: `${requestBody.transcript.length} chars: "${requestBody.transcript.substring(0, 100)}..."`,
+        notes: `${requestBody.notes.length} chars`
+      });
+      
+      // Warn if transcript is empty
+      if (!requestBody.transcript || requestBody.transcript.trim().length === 0) {
+        console.warn('[DEBUG] Warning: Sending empty transcript to backend!');
+      }
     }
 
     const response = await fetch(`${API_BASE_URL}/vibe-qa-stream`, {
@@ -264,9 +300,11 @@ export class APIClient {
 
     if (!response.ok) {
       const error = await response.json();
+      console.error('[DEBUG] Vibe API error response:', error);
       throw new Error(error.detail || 'Failed to send vibe QA request');
     }
 
+    console.log('[DEBUG] Vibe API response status:', response.status);
     return response;
   }
 }
