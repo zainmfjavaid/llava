@@ -223,25 +223,25 @@ export class APIClient {
     const user = authManager.getCurrentUser();
     if (!user && !noteId) throw new Error('User not authenticated');
 
-    let requestBody;
-    
+    let requestBody = {
+      question,
+      chat_history: chatHistory,
+    };
+
     if (noteId) {
-      // Saved note mode
-      requestBody = {
-        note_id: noteId,
-        question,
-        chat_history: chatHistory,
-      };
-    } else {
-      // Live transcript mode
-      requestBody = {
-        transcript: liveData?.transcript || '',
-        notes: liveData?.notes || '',
-        title: liveData?.title || 'Live Recording',
-        user_id: user.id,
-        question,
-        chat_history: chatHistory,
-      };
+      requestBody.note_id = noteId;
+    }
+
+    // Always include liveData if provided, regardless of whether noteId is present
+    if (liveData) {
+      requestBody.transcript = liveData.transcript || '';
+      requestBody.notes = liveData.notes || '';
+      requestBody.title = liveData.title || (noteId ? null : 'Live Recording'); // Use null title if noteId exists, otherwise default for live
+    }
+    
+    // If no noteId (purely live mode), we need a user_id for the backend to associate the context.
+    if (!noteId && user) {
+        requestBody.user_id = user.id;
     }
 
     const response = await fetch(`${API_BASE_URL}/single-note-qa-stream`, {

@@ -343,14 +343,15 @@ class RightSidebarManager {
     if (!messageElement) return;
     
     try {
+      // Always gather live transcript data, regardless of whether it is a saved note or live recording
+      const liveData = this.gatherLiveTranscriptData();
       let response;
       
       if (this.currentNoteId) {
-        // Use saved note
-        response = await APIClient.sendSingleNoteQAStream(question, this.currentNoteId, this.qaHistory);
+        // Use saved note, but also pass liveData
+        response = await APIClient.sendSingleNoteQAStream(question, this.currentNoteId, this.qaHistory, liveData);
       } else {
-        // Gather live transcript data
-        const liveData = this.gatherLiveTranscriptData();
+        // Live transcript mode, pass liveData (currentNoteId is null)
         response = await APIClient.sendSingleNoteQAStream(question, null, this.qaHistory, liveData);
       }
       const reader = response.body.getReader();
@@ -647,25 +648,21 @@ class RightSidebarManager {
       if (typeof getCurrentTranscript === 'function') {
         transcript = getCurrentTranscript() || '';
         console.log('[DEBUG] Transcript from getCurrentTranscript():', transcript.length, 'characters');
-      } else {
-        console.warn('[DEBUG] getCurrentTranscript is not a function, using DOM fallback');
-        throw new Error('getCurrentTranscript not available');
       }
     } catch (error) {
       console.error('[DEBUG] Error getting transcript from handler:', error);
-      // Fallback to DOM content if transcript handler fails
-      if (transcriptContent) {
-        const transcriptClone = transcriptContent.cloneNode(true);
-        
-        // Remove any buttons or UI elements
-        transcriptClone.querySelectorAll('button, .scroll-to-bottom-btn').forEach(el => el.remove());
-        
-        transcript = transcriptClone.textContent || '';
-        console.log('[DEBUG] Transcript from DOM fallback:', transcript.length, 'characters');
-      } else {
-        console.error('[DEBUG] No transcriptContent element found');
+    }
+
+    // If DOM transcript is longer than currentTranscript (includes interim words), use it instead
+    if (transcriptContent) {
+      const domText = transcriptContent.textContent || '';
+      if (domText.length > transcript.length) {
+        transcript = domText;
+        console.log('[DEBUG] Using DOM transcript as it is longer (', domText.length, 'characters');
       }
     }
+    // As a final fallback, ensure transcript is at least an empty string
+    transcript = transcript || '';
     
     const result = {
       title: title.trim(),

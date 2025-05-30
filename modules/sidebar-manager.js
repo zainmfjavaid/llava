@@ -407,8 +407,10 @@ class SidebarManager {
     // Hide landing page and show recording screen
     const initialScreen = document.getElementById('initialScreen');
     const recordingScreen = document.getElementById('recordingScreen');
+    const contextDumpScreen = document.getElementById('contextDumpScreen');
     
     if (initialScreen) initialScreen.style.display = 'none';
+    if (contextDumpScreen) contextDumpScreen.style.display = 'none';
     if (recordingScreen) recordingScreen.style.display = 'block';
 
     // Update home button states

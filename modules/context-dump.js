@@ -192,6 +192,8 @@ window.removeUploadedFile = function(index) {
 
 // Show context dump screen with smooth transition
 export async function showContextDumpScreen() {
+  // Clear any previous context data when opening context dump screen
+  clearContextData();
   const initialScreen = document.getElementById('initialScreen');
   const contextDumpScreen = document.getElementById('contextDumpScreen');
   
@@ -243,6 +245,22 @@ export async function showContextDumpScreen() {
     const { updateHomeButtonStates } = await import('./landing-page.js');
     updateHomeButtonStates();
   }, 200);
+  
+  // Clear any previous context data when opening context dump screen
+  clearContextData();
+  try {
+    const { rightSidebarManager } = await import('./right-sidebar-manager.js');
+    if (rightSidebarManager) {
+      if (typeof rightSidebarManager.hideSidebar === 'function') {
+        rightSidebarManager.hideSidebar();
+      }
+      if (typeof rightSidebarManager.setCurrentNote === 'function') {
+        rightSidebarManager.setCurrentNote(null);
+      }
+    }
+  } catch (e) {
+    console.warn('[ContextDump] Failed to reset right sidebar note:', e);
+  }
 }
 
 // Handle continue button click - transition to recording screen

@@ -123,6 +123,11 @@ export async function smoothNavigateHome() {
   if (vibeBtn) {
     vibeBtn.style.display = 'inline-flex';
   }
+
+  // As a final step, force a full reload to reset any lingering state
+  setTimeout(() => {
+    window.location.reload();
+  }, 400);
 }
 
 export function initializeSidebarHomeButtons() {
