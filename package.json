@@ -1,7 +1,7 @@
 {
   "name": "llava",
   "productName": "llava",
-  "version": "1.0.58",
+  "version": "1.0.63",
   "description": "AI Meeting Notes",
   "author": "llava",
   "main": "main.js",
