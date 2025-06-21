@@ -20,6 +20,7 @@ export const elements = {
   generateNotesBtn: document.getElementById('generateNotesBtn'),
   separator: document.getElementById('separator'),
   vibeBtn: document.getElementById('vibeBtn'),
+  gaiaBtn: document.getElementById('gaiaBtn'),
   qaVibeBtn: document.getElementById('qaVibeBtn')
 };
 

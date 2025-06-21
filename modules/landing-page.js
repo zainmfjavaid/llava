@@ -113,6 +113,8 @@ export async function smoothNavigateHome() {
   // Clear current note data and transcript
   window.currentNoteId = null;
   window.currentNote = null;
+  window.recordingMode = null; // Clear recording mode when navigating home
+  window.contextDumpInitiatedBy = null; // Clear context dump initiation mode
   clearTranscript(); // Clear transcript data when navigating home
   resetNotesGenerationState(); // Reset notes generation state when navigating home
   // Clear any existing chat history when returning home
@@ -120,8 +122,12 @@ export async function smoothNavigateHome() {
   
   // Restore vibe button visibility when returning to home
   const vibeBtn = document.getElementById('vibeBtn');
+  const gaiaBtn = document.getElementById('gaiaBtn');
   if (vibeBtn) {
     vibeBtn.style.display = 'inline-flex';
+  }
+  if (gaiaBtn) {
+    gaiaBtn.style.display = 'inline-flex';
   }
 
   // As a final step, force a full reload to reset any lingering state

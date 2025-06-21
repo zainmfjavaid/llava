@@ -150,19 +150,28 @@ export class APIClient {
     return await response.json();
   }
 
-  static async generateNotesStream(transcript, rawNotes) {
+  static async generateNotesStream(transcript, rawNotes, mode = null, contextData = null) {
     const user = authManager.getCurrentUser();
+    
+    const requestBody = {
+      transcript,
+      raw_notes: rawNotes,
+      user_id: user?.id,
+      mode: mode,
+    };
+
+    // Add context data if available
+    if (contextData) {
+      requestBody.context_notes = contextData.notes || '';
+      requestBody.context_files = contextData.fileNames || [];
+    }
     
     const response = await fetch(`${API_BASE_URL}/generate-notes-stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        transcript,
-        raw_notes: rawNotes,
-        user_id: user?.id,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

@@ -28,6 +28,7 @@ class SidebarManager {
     this.setupEventListeners();
     this.setupFocusBlurLogic();
     this.setupRecordingScreenSidebar();
+    this.setupContextDumpScreenSidebar();
   }
 
   restoreSidebarState() {
@@ -65,6 +66,18 @@ class SidebarManager {
       if (shrinkIconChat && expandIconChat) {
         shrinkIconChat.style.display = collapsed ? 'none' : 'block';
         expandIconChat.style.display = collapsed ? 'block' : 'none';
+      }
+    }
+    // Context dump screen
+    const sidebarContext = document.querySelector('.context-dump-screen .sidebar');
+    if (sidebarContext) {
+      const collapsed = localStorage.getItem('sidebar-collapsed-context') === 'true';
+      sidebarContext.classList.toggle('collapsed', collapsed);
+      const shrinkIconContext = document.getElementById('sidebar-toggle-shrink-context');
+      const expandIconContext = document.getElementById('sidebar-toggle-expand-context');
+      if (shrinkIconContext && expandIconContext) {
+        shrinkIconContext.style.display = collapsed ? 'none' : 'block';
+        expandIconContext.style.display = collapsed ? 'block' : 'none';
       }
     }
   }
@@ -138,6 +151,28 @@ class SidebarManager {
     }
   }
 
+  setupContextDumpScreenSidebar() {
+    const sidebarToggleBtnContext = document.getElementById('sidebar-toggle-context');
+    const sidebarContext = document.querySelector('.context-dump-screen .sidebar');
+
+    if (sidebarToggleBtnContext && sidebarContext) {
+      sidebarToggleBtnContext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSidebar(sidebarContext, 'sidebar-toggle-shrink-context', 'sidebar-toggle-expand-context');
+      });
+
+      // When sidebar is collapsed, allow click anywhere to expand
+      sidebarContext.addEventListener('click', (e) => {
+        if (sidebarContext.classList.contains('collapsed')) {
+          e.stopPropagation();
+          this.expandSidebar(sidebarContext, 'sidebar-toggle-shrink-context', 'sidebar-toggle-expand-context');
+        }
+      });
+    } else {
+      console.error('[SM] Context dump screen sidebar or toggle button NOT FOUND.');
+    }
+  }
+
   setupFocusBlurLogic() {
     // Setup focus/blur logic for all sidebars
     const sidebars = document.querySelectorAll('.sidebar');
@@ -202,6 +237,8 @@ class SidebarManager {
       localStorage.setItem('sidebar-collapsed-recording', collapsed);
     } else if (sidebar.classList.contains('chat-screen')) {
       localStorage.setItem('sidebar-collapsed-chat', collapsed);
+    } else if (sidebar.classList.contains('context-dump-screen')) {
+      localStorage.setItem('sidebar-collapsed-context', collapsed);
     } else {
       // fallback: check parent nodes
       if (sidebar.closest('.initial-screen')) {
@@ -210,6 +247,8 @@ class SidebarManager {
         localStorage.setItem('sidebar-collapsed-recording', collapsed);
       } else if (sidebar.closest('.chat-screen')) {
         localStorage.setItem('sidebar-collapsed-chat', collapsed);
+      } else if (sidebar.closest('.context-dump-screen')) {
+        localStorage.setItem('sidebar-collapsed-context', collapsed);
       }
     }
   }

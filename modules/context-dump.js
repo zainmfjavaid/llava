@@ -9,6 +9,7 @@ let uploadedFiles = [];
 export function initializeContextDump() {
   // Get elements
   const vibeBtn = document.getElementById('vibeBtn');
+  const gaiaBtn = document.getElementById('gaiaBtn');
   const contextContinueBtn = document.getElementById('contextContinueBtn');
   const backToHomeBtnContext = document.getElementById('backToHomeBtnContext');
   const homeBtnContext = document.getElementById('homeBtnContext');
@@ -16,6 +17,11 @@ export function initializeContextDump() {
   // Add click listener to Vibe button
   if (vibeBtn) {
     vibeBtn.addEventListener('click', showContextDumpScreen);
+  }
+  
+  // Add click listener to GAIA button (same functionality as Vibe button but with gaia mode)
+  if (gaiaBtn) {
+    gaiaBtn.addEventListener('click', () => showContextDumpScreen('gaia'));
   }
   
   // Add click listener to Continue button
@@ -94,8 +100,8 @@ function handleFileDrop(event) {
 
 // Add files to the uploaded files list
 function addFiles(files) {
-  const allowedTypes = ['text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-  const allowedExtensions = ['.txt', '.doc', '.docx', '.pdf', '.png', '.jpg', '.jpeg'];
+  const allowedTypes = ['text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'image/png', 'image/jpeg', 'image/jpg'];
+  const allowedExtensions = ['.txt', '.doc', '.docx', '.pdf', '.pptx', '.png', '.jpg', '.jpeg'];
   
   files.forEach(file => {
     // Check file type
@@ -103,7 +109,7 @@ function addFiles(files) {
                        allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
     
     if (!isValidType) {
-      alert(`File "${file.name}" is not supported. Please upload TXT, DOC, DOCX, PDF, PNG, JPG, or JPEG files.`);
+      alert(`File "${file.name}" is not supported. Please upload TXT, DOC, DOCX, PDF, PPTX, PNG, JPG, or JPEG files.`);
       return;
     }
     
@@ -164,6 +170,8 @@ function getFileIcon(filename) {
     case 'doc':
     case 'docx':
       return '<path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>';
+    case 'pptx':
+      return '<path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>';
     case 'txt':
       return '<path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>';
     case 'png':
@@ -191,7 +199,10 @@ window.removeUploadedFile = function(index) {
 };
 
 // Show context dump screen with smooth transition
-export async function showContextDumpScreen() {
+export async function showContextDumpScreen(initiatedBy = 'meeting') {
+  // Store how the context dump was initiated for mode tracking
+  window.contextDumpInitiatedBy = initiatedBy;
+  
   // Clear any previous context data when opening context dump screen
   clearContextData();
   const initialScreen = document.getElementById('initialScreen');
@@ -271,8 +282,12 @@ async function handleContinueFromContextDump() {
     // Show loading state
     showLoadingState(continueBtn);
     
-    // Collect current form data
+    // Collect current form data and mode information
     const contextData = getFormData();
+    
+    // Add mode information based on how context dump was initiated
+    const recordingMode = window.contextDumpInitiatedBy || 'meeting';
+    window.recordingMode = recordingMode; // Store for note generation
     
     // Send context data to backend and create new note
     const { authManager } = await import('./auth-manager.js');
@@ -281,6 +296,9 @@ async function handleContinueFromContextDump() {
     if (!user) {
       throw new Error('User not authenticated');
     }
+    
+    console.log('Current user:', user);
+    console.log('User ID:', user.id);
     
     // Create note with context data
     const { APIClient } = await import('./api-client.js');
