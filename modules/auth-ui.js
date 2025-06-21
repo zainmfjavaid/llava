@@ -2,6 +2,25 @@
 import { authManager } from './auth-manager.js';
 import { initializeLandingPage, addBackToHomeButton, initializeSidebarHomeButtons } from './landing-page.js';
 
+function clearError() {
+    const authError = document.getElementById('authError');
+    if (authError) {
+        authError.textContent = '';
+        authError.style.display = 'none';
+    }
+}
+
+export function showError(message) {
+    const authError = document.getElementById('authError');
+    if (authError) {
+        authError.textContent = message;
+        authError.style.display = 'block';
+    } else {
+        // Fallback for errors outside the auth screen
+        alert(message);
+    }
+}
+
 export function initializeAuthUI() {
   const authScreen = document.getElementById('authScreen');
   const initialScreen = document.getElementById('initialScreen');
@@ -183,16 +202,6 @@ export function initializeAuthUI() {
     addBackToHomeButton();
     // Re-initialize all app modules now that the main UI is visible (fix auto-resize and event bindings)
     if (window.initializeAppModules) window.initializeAppModules();
-  }
-
-  function clearError() {
-    authError.textContent = '';
-    authError.style.display = 'none';
-  }
-
-  function showError(message) {
-    authError.textContent = message;
-    authError.style.display = 'block';
   }
 
   function updateAuthMode() {

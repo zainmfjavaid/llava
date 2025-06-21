@@ -5,6 +5,7 @@ import { sidebarManager } from './sidebar-manager.js';
 import { chatManager } from './chat-manager.js';
 import { clearTranscript } from './transcript-handler.js';
 import { resetNotesGenerationState } from './notes-processor.js';
+import { generatePodcastSummary } from './podcast-summary.js';
 
 export async function initializeLandingPage() {
   // Initialize chat functionality
@@ -12,6 +13,16 @@ export async function initializeLandingPage() {
 
   // Initialize sidebar
   await sidebarManager.initialize();
+
+  // Add podcast summary button
+  const actionButtons = document.querySelector('.action-buttons');
+  if (actionButtons) {
+    const podcastButton = document.createElement('button');
+    podcastButton.className = 'podcast-summary-button';
+    podcastButton.textContent = 'Generate Weekly Meeting Podcast';
+    podcastButton.onclick = generatePodcastSummary;
+    actionButtons.appendChild(podcastButton);
+  }
 }
 
 // Add back to home functionality
