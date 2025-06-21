@@ -14,6 +14,7 @@ let titleUpdateTimeout = null;
 let resizeTimeout = null;
 let notesGenerated = false; // Flag to track if AI notes have been generated
 let isGeneratingNotes = false; // Flag to prevent title override during notes generation
+let noteGenerationMode = 'standard'; // Default mode for note generation
 
 // Load citation titles for note references
 async function loadCitationTitles(container) {
@@ -78,11 +79,38 @@ export function getCurrentNoteId() {
   return currentNoteId;
 }
 
+// Determine note generation mode based on context
+async function determineNoteMode() {
+  // Check if recording was initiated via GAIA button (backward compatible check)
+  if (window.recordingMode && window.recordingMode === 'gaia') {
+    console.log('Using GAIA mode based on recording initiation');
+    return 'gaia';
+  }
+  
+  // For everything else (meeting, research, standard), use the standard prompt
+  // The existing standard prompt already handles all these cases well
+  return 'standard';
+}
+
+// Set note generation mode
+export function setNoteGenerationMode(mode) {
+  if (['standard', 'gaia'].includes(mode)) {
+    noteGenerationMode = mode;
+    console.log('Note generation mode set to:', mode);
+  }
+}
+
+// Get current note generation mode
+export function getNoteGenerationMode() {
+  return noteGenerationMode;
+}
+
 // Reset notes generation state (for new recording sessions)
 export function resetNotesGenerationState() {
   notesGenerated = false;
   isGeneratingNotes = false; // Clear the generation flag
   currentNoteId = null;
+  noteGenerationMode = 'standard'; // Reset to default mode
   
   // Reset generate notes button state
   if (elements.generateNotesBtn) {
@@ -291,12 +319,17 @@ export async function generateNotes() {
     return;
   }
   
+  // Determine the appropriate mode
+  const mode = await determineNoteMode();
+  console.log('Using note generation mode:', mode);
+  
   // Set flag to prevent title override during notes generation
   isGeneratingNotes = true;
   
-  // Show loading state
+  // Show loading state with mode indicator
   const originalText = elements.generateNotesBtn.querySelector('svg').nextSibling.textContent.trim();
-  elements.generateNotesBtn.querySelector('svg').nextSibling.textContent = ' Generating...';
+  const modeText = mode === 'gaia' ? ' (GAIA)' : '';
+  elements.generateNotesBtn.querySelector('svg').nextSibling.textContent = ` Generating${modeText}...`;
   elements.generateNotesBtn.disabled = true;
   
   // Hide resume text using visibility hidden and disable it to preserve spacing
@@ -312,8 +345,24 @@ export async function generateNotes() {
   initializeStreamingNotesArea();
   
   try {
+    // Get context data if available
+    let contextData = null;
+    if (currentNoteId) {
+      try {
+        const note = await APIClient.getNote(currentNoteId);
+        if (note.context) {
+          contextData = {
+            notes: note.context.notes || '',
+            fileNames: note.context.files ? note.context.files.map(f => f.name) : []
+          };
+        }
+      } catch (error) {
+        console.error('Failed to get context data:', error);
+      }
+    }
+    
     // Use the API client for authenticated requests
-    const response = await APIClient.generateNotesStream(currentTranscript.trim(), rawNotes);
+    const response = await APIClient.generateNotesStream(currentTranscript.trim(), rawNotes, mode, contextData);
     
     // Handle streaming response
     await handleStreamingResponse(response);

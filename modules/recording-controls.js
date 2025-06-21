@@ -156,6 +156,11 @@ export async function startRecording() {
       elements.vibeBtn.style.display = 'inline-block';
     }
     
+    // Show GAIA button while recording
+    if (elements.gaiaBtn) {
+      elements.gaiaBtn.style.display = 'inline-block';
+    }
+    
     // Show Vibe button in right sidebar while recording
     if (elements.qaVibeBtn) {
       elements.qaVibeBtn.style.display = 'block';
@@ -243,6 +248,11 @@ export async function stopRecording() {
     // Hide Vibe button when recording stops
     if (elements.vibeBtn) {
       elements.vibeBtn.style.display = 'none';
+    }
+    
+    // Hide GAIA button when recording stops
+    if (elements.gaiaBtn) {
+      elements.gaiaBtn.style.display = 'none';
     }
     
     // Hide Vibe button in right sidebar when recording stops
