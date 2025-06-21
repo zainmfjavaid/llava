@@ -2,10 +2,10 @@
 import { authManager, authenticatedFetch } from './auth-manager.js';
 
 // Toggle production vs development API endpoint
-const is_production = true; // set to true in production builds
+const is_production = false; // set to true in production builds
 const API_BASE_URL = is_production
   ? 'https://api.llava.io/v1'
-  : 'http://localhost:9000/v1';
+  : 'http://localhost:8081/v1';
 
 export class APIClient {
   // Notes CRUD operations
@@ -325,5 +325,25 @@ export class APIClient {
 
     console.log('[DEBUG] Vibe API response status:', response.status);
     return response;
+  }
+
+  // Weekly summary endpoint
+  static async generateWeeklySummary() {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/generate-weekly-summary`, {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: user.id,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to generate weekly summary');
+    }
+
+    return await response.json();
   }
 }

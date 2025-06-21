@@ -12,6 +12,9 @@ export async function initializeLandingPage() {
 
   // Initialize sidebar
   await sidebarManager.initialize();
+
+  // Initialize weekly summary button
+  initializeWeeklyButton();
 }
 
 // Add back to home functionality
@@ -227,4 +230,225 @@ export function updateHomeButtonStates() {
   if (homeBtnContext) {
     homeBtnContext.classList.toggle('active', isOnHomeScreen);
   }
+}
+
+// Initialize weekly summary button functionality
+export function initializeWeeklyButton() {
+  const weeklyBtn = document.getElementById('weeklyBtn');
+  
+  if (weeklyBtn) {
+    weeklyBtn.addEventListener('click', async () => {
+      try {
+        // Show loading state
+        const originalContent = weeklyBtn.innerHTML;
+        weeklyBtn.disabled = true;
+        weeklyBtn.innerHTML = `
+          <div class="weekly-icon">
+            <svg class="spinner" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.2"/>
+              <path d="M4 12a8 8 0 018-8V2.5a.5.5 0 011 0V4a8 8 0 11-8 8z" fill="currentColor"/>
+            </svg>
+          </div>
+          <span>Generating...</span>
+        `;
+
+        // Import APIClient and generate weekly summary
+        const { APIClient } = await import('./api-client.js');
+        const result = await APIClient.generateWeeklySummary();
+
+        // Show the summary in a modal or popup
+        showWeeklySummaryModal(result.summary);
+
+      } catch (error) {
+        console.error('Error generating weekly summary:', error);
+        
+        // Show error message
+        alert(`Failed to generate weekly summary: ${error.message}`);
+        
+      } finally {
+        // Restore button state
+        weeklyBtn.disabled = false;
+        weeklyBtn.innerHTML = originalContent;
+      }
+    });
+  }
+}
+
+// Show weekly summary in a modal
+function showWeeklySummaryModal(summary) {
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.className = 'weekly-summary-modal';
+  modal.innerHTML = `
+    <div class="weekly-summary-content">
+      <div class="weekly-summary-header">
+        <h2>Weekly Podcast Summary</h2>
+        <button class="weekly-summary-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="weekly-summary-body">
+        <div class="weekly-summary-text">${summary.replace(/\n/g, '<br>')}</div>
+      </div>
+      <div class="weekly-summary-footer">
+        <button class="weekly-summary-copy-btn">Copy to Clipboard</button>
+      </div>
+    </div>
+  `;
+
+  // Add modal styles
+  const style = document.createElement('style');
+  style.textContent = `
+    .weekly-summary-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .weekly-summary-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .weekly-summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .weekly-summary-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-dark-color);
+    }
+
+    .weekly-summary-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background-color 0.2s ease;
+    }
+
+    .weekly-summary-close:hover {
+      background-color: #f8f9fa;
+    }
+
+    .weekly-summary-close svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .weekly-summary-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .weekly-summary-text {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--text-dark-color);
+      white-space: pre-wrap;
+    }
+
+    .weekly-summary-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .weekly-summary-copy-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+    }
+
+    .weekly-summary-copy-btn:hover {
+      background: #5a67d8;
+    }
+
+    .spinner {
+      animation: spin 1s linear infinite;
+      width: 14px;
+      height: 14px;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Add event listeners
+  const closeBtn = modal.querySelector('.weekly-summary-close');
+  const copyBtn = modal.querySelector('.weekly-summary-copy-btn');
+
+  closeBtn.addEventListener('click', () => {
+    document.body.removeChild(modal);
+    document.head.removeChild(style);
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(summary);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy to Clipboard';
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = summary;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy to Clipboard';
+      }, 2000);
+    }
+  });
+
+  // Close modal when clicking outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+      document.head.removeChild(style);
+    }
+  });
+
+  // Add to DOM
+  document.body.appendChild(modal);
 }
