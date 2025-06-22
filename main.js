@@ -1,7 +1,7 @@
 console.log('[Main] main.js script started execution.');
 // main.js
 // Initialize Electron modules and load environment variables
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, protocol } = require('electron');
 const path = require('path');
 // Load environment variables from .env (packaged vs dev)
 require('dotenv').config({
@@ -69,7 +69,59 @@ function createWindow() {
   win.loadFile('index.html');
 }
 
-app.whenReady().then(createWindow);
+// Register protocol scheme as standard before app is ready
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'llava-audio', privileges: { standard: true, secure: true, supportsFetchAPI: true } }
+]);
+
+app.whenReady().then(() => {
+  // Register custom protocol for serving audio files
+  protocol.registerFileProtocol('llava-audio', (request, callback) => {
+    try {
+      // Parse the URL properly to extract just the filename
+      let filename = request.url.replace('llava-audio://', '').replace('llava-audio:', '');
+      // Remove any trailing slashes
+      filename = filename.replace(/\/+$/, '');
+      // Remove any leading slashes
+      filename = filename.replace(/^\/+/, '');
+      
+      const audioDir = path.join(__dirname, '..', 'llava_backend', 'audio_files');
+      const filePath = path.join(audioDir, filename);
+      
+      console.log('[Main] ===== AUDIO PROTOCOL DEBUG =====');
+      console.log('[Main] Full request URL:', request.url);
+      console.log('[Main] Cleaned filename:', filename);
+      console.log('[Main] Audio directory:', audioDir);
+      console.log('[Main] Full file path:', filePath);
+      console.log('[Main] File exists:', fs.existsSync(filePath));
+      
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        console.log('[Main] File size:', stats.size, 'bytes');
+        console.log('[Main] File modified:', stats.mtime);
+        console.log('[Main] SUCCESS: File found and will be served');
+      } else {
+        console.log('[Main] ERROR: File not found at path:', filePath);
+        // List available files for debugging
+        try {
+          const availableFiles = fs.readdirSync(audioDir);
+          console.log('[Main] Available files in audio directory:', availableFiles);
+        } catch (e) {
+          console.log('[Main] Could not list audio directory contents');
+        }
+      }
+      
+      console.log('[Main] ===================================');
+      
+      callback({ path: filePath });
+    } catch (error) {
+      console.error('[Main] Error handling audio protocol:', error);
+      callback({ error: -2 }); // File not found error
+    }
+  });
+  
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

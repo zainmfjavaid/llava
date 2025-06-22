@@ -248,10 +248,12 @@ export function initializeWeeklyButton() {
         return;
       }
       
+      // Declare originalContent outside try block
+      let originalContent = weeklyBtn.innerHTML;
+      
       try {
         console.log('Weekly podcast generation started');
         // Show loading state
-        const originalContent = weeklyBtn.innerHTML;
         weeklyBtn.disabled = true;
         weeklyBtn.innerHTML = `
           <div class="weekly-icon">
@@ -308,17 +310,29 @@ function showWeeklySummaryModal(summary, audioFilePath = null) {
           <div class="weekly-summary-audio">
             <h3>🎧 Listen to Podcast</h3>
             <audio controls preload="metadata" style="width: 100%; margin-bottom: 20px;" 
-                   onerror="console.error('Audio load error:', this.error)"
-                   onloadstart="console.log('Audio load started')"
-                   oncanplay="console.log('Audio can play')"
-                   onloadeddata="console.log('Audio data loaded')">
-              <source src="/v1/weekly-podcast-audio/${audioFilename}" type="audio/mpeg"
+                   onerror="console.error('Audio load error:', this.error); console.error('Audio error details:', this.error ? this.error.message : 'Unknown error')"
+                   onloadstart="console.log('Audio load started for:', this.src)"
+                   oncanplay="console.log('Audio can play:', this.src)"
+                   onloadeddata="console.log('Audio data loaded:', this.src)"
+                   onplay="console.log('Audio started playing')"
+                   onpause="console.log('Audio paused')"
+                   onended="console.log('Audio ended')"
+                   onabort="console.log('Audio loading aborted')"
+                   onemptied="console.log('Audio emptied')"
+                   onstalled="console.log('Audio stalled')">
+              <source src="llava-audio:${audioFilename}" type="audio/mpeg"
                       onerror="console.error('Audio source error for:', this.src)">
               Your browser does not support the audio element.
             </audio>
+            <div style="font-size: 0.8em; color: #666; margin-bottom: 10px;">
+              Audio URL: <a href="llava-audio:${audioFilename}" target="_blank">llava-audio:${audioFilename}</a>
+            </div>
             <div class="audio-controls">
               <button class="download-audio-btn" onclick="downloadPodcastAudio('${audioFilename}')">
                 📥 Download MP3
+              </button>
+              <button class="test-audio-btn" onclick="testAudioPlayback('${audioFilename}')" style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; margin-left: 8px;">
+                🔊 Test Audio
               </button>
               <span style="font-size: 0.8em; color: #666; margin-left: 10px;">
                 File: ${audioFilename}
@@ -556,29 +570,98 @@ function showWeeklySummaryModal(summary, audioFilePath = null) {
   document.body.appendChild(modal);
 }
 
+// Global function to test audio playback
+window.testAudioPlayback = async function(filename) {
+  console.log('Testing audio playback for:', filename);
+  try {
+    // Create a new audio element programmatically
+    const audio = new Audio(`llava-audio:${filename}`);
+    
+    // Add event listeners for debugging
+    audio.addEventListener('loadstart', () => console.log('Test audio: Load started'));
+    audio.addEventListener('loadeddata', () => console.log('Test audio: Data loaded'));
+    audio.addEventListener('canplay', () => console.log('Test audio: Can play'));
+    audio.addEventListener('play', () => console.log('Test audio: Playing'));
+    audio.addEventListener('error', (e) => {
+      console.error('Test audio error:', e);
+      console.error('Audio error code:', audio.error ? audio.error.code : 'Unknown');
+      console.error('Audio error message:', audio.error ? audio.error.message : 'Unknown');
+    });
+    
+    // Try to play
+    console.log('Attempting to play audio...');
+    await audio.play();
+    
+    // Stop after 3 seconds for testing
+    setTimeout(() => {
+      audio.pause();
+      console.log('Test audio stopped');
+    }, 3000);
+    
+  } catch (error) {
+    console.error('Error testing audio playback:', error);
+    alert(`Failed to test audio: ${error.message}`);
+  }
+};
+
 // Global function to download podcast audio
 window.downloadPodcastAudio = async function(filename) {
+  console.log('Download button clicked for:', filename);
   try {
-    const { APIClient } = await import('./api-client.js');
-    const response = await APIClient.getWeeklyPodcastAudio(filename);
+    // Try API endpoint first (if server is running)
+    console.log('Trying API endpoint first...');
+    try {
+      const { APIClient } = await import('./api-client.js');
+      const response = await APIClient.getWeeklyPodcastAudio(filename, true);
+      
+      console.log('API response received:', response.status, response.statusText);
+      
+      // Create blob from response
+      const blob = await response.blob();
+      console.log('Blob created from API, size:', blob.size, 'bytes');
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      
+      console.log('Triggering download via API...');
+      a.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        console.log('API download cleanup completed');
+      }, 100);
+      
+      return; // Success, exit function
+      
+    } catch (apiError) {
+      console.log('API endpoint failed, trying direct file access:', apiError.message);
+    }
     
-    // Create blob from response
-    const blob = await response.blob();
-    
-    // Create download link
-    const url = window.URL.createObjectURL(blob);
+    // Fallback: Use custom protocol for direct file access
+    console.log('Using direct file access via custom protocol...');
     const a = document.createElement('a');
-    a.href = url;
+    a.href = `llava-audio:${filename}`;
     a.download = filename;
     document.body.appendChild(a);
+    
+    console.log('Triggering download via custom protocol...');
     a.click();
     
     // Cleanup
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    setTimeout(() => {
+      document.body.removeChild(a);
+      console.log('Direct download cleanup completed');
+    }, 100);
     
   } catch (error) {
     console.error('Error downloading audio:', error);
-    alert('Failed to download audio file');
+    console.error('Error stack:', error.stack);
+    alert(`Failed to download audio file: ${error.message}`);
   }
 };

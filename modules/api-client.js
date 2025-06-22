@@ -368,11 +368,15 @@ export class APIClient {
   }
 
   // Download weekly podcast audio
-  static async getWeeklyPodcastAudio(filename) {
-    const response = await fetch(`${API_BASE_URL}/weekly-podcast-audio/${filename}`);
+  static async getWeeklyPodcastAudio(filename, download = false) {
+    const url = download 
+      ? `${API_BASE_URL}/weekly-podcast-audio/${filename}?download=true`
+      : `${API_BASE_URL}/weekly-podcast-audio/${filename}`;
+    
+    const response = await fetch(url);
     
     if (!response.ok) {
-      throw new Error('Failed to download podcast audio');
+      throw new Error('Failed to get podcast audio');
     }
     
     return response;
