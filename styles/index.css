@@ -777,6 +777,9 @@ textarea.chat {
     cursor: pointer;
     max-width: 600px;
     width: 100%;
+    position: relative;
+    overflow: hidden;
+    opacity: 0.60;
 }
 
 .podcast-tile:hover {
@@ -864,6 +867,36 @@ textarea.chat {
 
 .podcast-tile-audio audio::-webkit-media-controls-panel {
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Shimmer Animation for Podcast Tile */
+.podcast-tile.shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 100%
+    );
+    animation: shimmerSlide 1.5s ease-in-out;
+    transform: skewX(-20deg);
+}
+
+@keyframes shimmerSlide {
+    0% {
+        transform: translateX(-100%) skewX(-20deg);
+    }
+    50% {
+        transform: translateX(300%) skewX(-20deg);
+    }
+    100% {
+        transform: translateX(-100%) skewX(-20deg);
+    }
 }
 
 /* Responsive design for podcast tile */

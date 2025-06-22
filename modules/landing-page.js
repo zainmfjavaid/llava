@@ -272,8 +272,8 @@ export function initializeWeeklyButton() {
         const { APIClient } = await import('./api-client.js');
         const result = await APIClient.generateWeeklyPodcast();
 
-        // Show the summary in a modal or popup with audio option
-        showWeeklySummaryModal(result.summary, result.audio_file_path);
+        // Update the podcast tile with the new content
+        updatePodcastTileWithNewContent(result.summary, result.audio_file_path);
 
       } catch (error) {
         console.error('Error generating weekly summary:', error);
@@ -291,287 +291,7 @@ export function initializeWeeklyButton() {
 }
 
 // Show weekly summary in a modal
-function showWeeklySummaryModal(summary, audioFilePath = null) {
-  // Extract filename from path for API call
-  const audioFilename = audioFilePath ? audioFilePath.split('/').pop() : null;
-  
-  // Create modal overlay
-  const modal = document.createElement('div');
-  modal.className = 'weekly-summary-modal';
-  modal.innerHTML = `
-    <div class="weekly-summary-content">
-      <div class="weekly-summary-header">
-        <h2>🎙️ Weekly Podcast Summary</h2>
-        <button class="weekly-summary-close" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-          </svg>
-        </button>
-      </div>
-      <div class="weekly-summary-body">
-        ${audioFilename ? `
-          <div class="weekly-summary-audio">
-            <h3>🎧 Listen to Podcast</h3>
-            <audio controls preload="metadata" style="width: 100%; margin-bottom: 20px;" 
-                   onerror="console.error('Audio load error:', this.error); console.error('Audio error details:', this.error ? this.error.message : 'Unknown error')"
-                   onloadstart="console.log('Audio load started for:', this.src)"
-                   oncanplay="console.log('Audio can play:', this.src)"
-                   onloadeddata="console.log('Audio data loaded:', this.src)"
-                   onplay="console.log('Audio started playing')"
-                   onpause="console.log('Audio paused')"
-                   onended="console.log('Audio ended')"
-                   onabort="console.log('Audio loading aborted')"
-                   onemptied="console.log('Audio emptied')"
-                   onstalled="console.log('Audio stalled')">
-              <source src="llava-audio:${audioFilename}" type="audio/mpeg"
-                      onerror="console.error('Audio source error for:', this.src)">
-              Your browser does not support the audio element.
-            </audio>
-            <div style="font-size: 0.8em; color: #666; margin-bottom: 10px;">
-              Audio URL: <a href="llava-audio:${audioFilename}" target="_blank">llava-audio:${audioFilename}</a>
-            </div>
-            <div class="audio-controls">
-              <button class="download-audio-btn" onclick="downloadPodcastAudio('${audioFilename}')">
-                📥 Download MP3
-              </button>
-              <button class="test-audio-btn" onclick="testAudioPlayback('${audioFilename}')" style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; margin-left: 8px;">
-                🔊 Test Audio
-              </button>
-              <span style="font-size: 0.8em; color: #666; margin-left: 10px;">
-                File: ${audioFilename}
-              </span>
-            </div>
-          </div>
-        ` : `
-          <div class="weekly-summary-no-audio">
-            <h3>⚠️ Audio Generation Unavailable</h3>
-            <p style="margin: 0; color: #666; font-size: 0.9em;">
-              Audio couldn't be generated (likely due to ElevenLabs quota limits). You can still read the podcast transcript below.
-            </p>
-          </div>
-        `}
-        <div class="weekly-summary-text">
-          <h3>📝 Transcript</h3>
-          ${summary.replace(/\n/g, '<br>')}
-        </div>
-      </div>
-      <div class="weekly-summary-footer">
-        <button class="weekly-summary-copy-btn">Copy Text</button>
-      </div>
-    </div>
-  `;
 
-  // Add modal styles
-  const style = document.createElement('style');
-  style.textContent = `
-    .weekly-summary-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-    .weekly-summary-content {
-      background: white;
-      border-radius: 16px;
-      max-width: 800px;
-      width: 100%;
-      max-height: 80vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    }
-
-    .weekly-summary-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 24px;
-      border-bottom: 1px solid #e9ecef;
-    }
-
-    .weekly-summary-header h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--text-dark-color);
-    }
-
-    .weekly-summary-close {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 8px;
-      transition: background-color 0.2s ease;
-    }
-
-    .weekly-summary-close:hover {
-      background-color: #f8f9fa;
-    }
-
-    .weekly-summary-close svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    .weekly-summary-body {
-      padding: 24px;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .weekly-summary-audio {
-      margin-bottom: 24px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #e9ecef;
-    }
-
-    .weekly-summary-audio h3 {
-      margin: 0 0 16px 0;
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--text-dark-color);
-    }
-
-    .audio-controls {
-      display: flex;
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .download-audio-btn {
-      background: #28a745;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-      font-size: 0.9rem;
-      transition: background-color 0.2s ease;
-    }
-
-    .download-audio-btn:hover {
-      background: #218838;
-    }
-
-    .weekly-summary-no-audio {
-      margin-bottom: 24px;
-      padding: 16px;
-      background: #fff3cd;
-      border: 1px solid #ffeaa7;
-      border-radius: 8px;
-    }
-
-    .weekly-summary-no-audio h3 {
-      margin: 0 0 8px 0;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #856404;
-    }
-
-    .weekly-summary-text {
-      font-size: 1rem;
-      line-height: 1.6;
-      color: var(--text-dark-color);
-      white-space: pre-wrap;
-    }
-
-    .weekly-summary-text h3 {
-      margin: 0 0 16px 0;
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--text-dark-color);
-    }
-
-    .weekly-summary-footer {
-      padding: 16px 24px;
-      border-top: 1px solid #e9ecef;
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    .weekly-summary-copy-btn {
-      background: #667eea;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: background-color 0.2s ease;
-    }
-
-    .weekly-summary-copy-btn:hover {
-      background: #5a67d8;
-    }
-
-    .spinner {
-      animation: spin 1s linear infinite;
-      width: 14px;
-      height: 14px;
-    }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-  `;
-  document.head.appendChild(style);
-
-  // Add event listeners
-  const closeBtn = modal.querySelector('.weekly-summary-close');
-  const copyBtn = modal.querySelector('.weekly-summary-copy-btn');
-
-  closeBtn.addEventListener('click', () => {
-    document.body.removeChild(modal);
-    document.head.removeChild(style);
-  });
-
-  copyBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(summary);
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => {
-        copyBtn.textContent = 'Copy to Clipboard';
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to copy text:', err);
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = summary;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => {
-        copyBtn.textContent = 'Copy to Clipboard';
-      }, 2000);
-    }
-  });
-
-  // Close modal when clicking outside
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-      document.head.removeChild(style);
-    }
-  });
-
-  // Add to DOM
-  document.body.appendChild(modal);
-}
 
 // Global function to test audio playback
 window.testAudioPlayback = async function(filename) {
@@ -716,6 +436,17 @@ export function initializePodcastTile() {
       audioContainer.style.display = 'none';
     }
   });
+  
+  // Add hover shimmer effect with throttling
+  let lastHoverShimmer = 0;
+  podcastTile.addEventListener('mouseenter', () => {
+    const now = Date.now();
+    // Throttle hover shimmers to max once every 2.5 seconds
+    if (now - lastHoverShimmer > 2500) {
+      addPodcastTileShimmer();
+      lastHoverShimmer = now;
+    }
+  });
 }
 
 // Load the most recent podcast from the audio files directory
@@ -727,6 +458,7 @@ async function loadMostRecentPodcast() {
     const userId = authManager.getCurrentUser()?.id;
     if (!userId) {
       console.warn('No user ID available for podcast loading');
+      showPodcastPlaceholder();
       return;
     }
     
@@ -737,72 +469,48 @@ async function loadMostRecentPodcast() {
       const data = await response.json();
       displayPodcastTile(data.filename, data.created_date, data.summary_preview);
     } else {
-      // Fallback: try to load from local files
-      await loadPodcastFromLocalFiles();
+      // No podcast found, show placeholder
+      showPodcastPlaceholder();
     }
     
   } catch (error) {
     console.error('Error loading recent podcast:', error);
-    await loadPodcastFromLocalFiles();
+    showPodcastPlaceholder();
   }
 }
 
-// Fallback method to load podcast from local files
-async function loadPodcastFromLocalFiles() {
-  try {
-    // List of known audio files (this could be made dynamic)
-    const audioFiles = [
-      'weekly_podcast_1750559534.mp3',
-      'weekly_podcast_1750558435.mp3',
-      'weekly_podcast_1750558064.mp3',
-      'weekly_podcast_1750557525.mp3',
-      'weekly_podcast_1750556893.mp3'
-    ];
-    
-    // Find the most recent one that exists
-    for (const filename of audioFiles) {
-      try {
-        // Test if the file exists by trying to load it
-        const testAudio = new Audio(`llava-audio:${filename}`);
-        await new Promise((resolve, reject) => {
-          testAudio.addEventListener('canplaythrough', resolve, { once: true });
-          testAudio.addEventListener('error', reject, { once: true });
-          testAudio.load();
-        });
-        
-        // If we get here, the file exists
-        const timestamp = filename.match(/(\d+)/)?.[1];
-        const date = timestamp ? new Date(parseInt(timestamp) * 1000).toLocaleDateString() : 'Recent';
-        displayPodcastTile(filename, date, 'Weekly podcast summary with Liam & Daniel');
-        return;
-        
-      } catch (fileError) {
-        console.log(`File ${filename} not accessible, trying next...`);
-        continue;
-      }
-    }
-    
-    // If no files found, hide the tile
-    console.log('No accessible podcast files found');
-    hidePodcastTile();
-    
-  } catch (error) {
-    console.error('Error loading podcast from local files:', error);
-    hidePodcastTile();
-  }
-}
 
 // Display the podcast tile with the given information
-function displayPodcastTile(filename, date, summaryPreview) {
+function displayPodcastTile(filename, date, summaryPreview, updateTitle = false) {
   const podcastTile = document.getElementById('podcastTile');
+  const title = document.querySelector('.podcast-tile-title');
   const subtitle = document.getElementById('podcastTileSubtitle');
   const audioSource = document.getElementById('podcastAudioSource');
   const audio = document.querySelector('#podcastTileAudio audio');
   
-  if (!podcastTile || !subtitle || !audioSource || !audio) {
+  if (!podcastTile || !title || !subtitle || !audioSource || !audio) {
     console.error('Podcast tile elements not found for display');
     return;
   }
+  
+  // Always update title with proper date format
+  let dateForTitle;
+  const timestampMatch = filename.match(/(\d+)/);
+  if (timestampMatch) {
+    const timestamp = parseInt(timestampMatch[1]);
+    dateForTitle = new Date(timestamp * 1000).toLocaleDateString('en-US', { 
+      month: '2-digit', 
+      day: '2-digit', 
+      year: '2-digit' 
+    });
+  } else {
+    dateForTitle = new Date().toLocaleDateString('en-US', { 
+      month: '2-digit', 
+      day: '2-digit', 
+      year: '2-digit' 
+    });
+  }
+  title.textContent = `The Lost Week Podcast ${dateForTitle}`;
   
   // Update subtitle with date and preview
   subtitle.textContent = `${date} • ${summaryPreview || 'Weekly podcast summary'}`;
@@ -839,17 +547,110 @@ function displayPodcastTile(filename, date, summaryPreview) {
     }
   });
   
+  // Show audio controls and play button for actual podcasts
+  const audioContainer = document.getElementById('podcastTileAudio');
+  const playButton = document.querySelector('.podcast-play-btn');
+  if (audioContainer) {
+    audioContainer.style.display = 'none'; // Initially hidden, can be toggled by clicking
+  }
+  if (playButton) {
+    playButton.style.display = 'flex'; // Show play button for actual podcasts
+  }
+  
   // Show the tile
   podcastTile.style.display = 'block';
+  
+  // Add shimmer effect for initial load (only if tile wasn't visible before)
+  if (!updateTitle && !podcastTile.classList.contains('shimmer-triggered')) {
+    setTimeout(() => addPodcastTileShimmer(), 100);
+    podcastTile.classList.add('shimmer-triggered');
+  }
   
   console.log(`Podcast tile displayed for: ${filename}`);
 }
 
-// Hide the podcast tile if no recent podcast is available
-function hidePodcastTile() {
-  const podcastTile = document.getElementById('podcastTile');
-  if (podcastTile) {
-    podcastTile.style.display = 'none';
+// Update podcast tile with new content (for newly generated podcasts)
+function updatePodcastTileWithNewContent(summary, audioFilePath) {
+  if (!audioFilePath) {
+    console.warn('No audio file path provided, showing error message');
+    alert('Podcast generation completed but no audio was created (likely due to ElevenLabs quota limits)');
+    return;
   }
-  console.log('Podcast tile hidden - no recent podcast available');
+  
+  // Extract filename from path
+  const audioFilename = audioFilePath.split('/').pop();
+  
+  // Get current date in MM/DD/YY format
+  const now = new Date();
+  const dateForTitle = now.toLocaleDateString('en-US', { 
+    month: '2-digit', 
+    day: '2-digit', 
+    year: '2-digit' 
+  });
+  const dateForSubtitle = now.toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+  
+  // Update the podcast tile with new title
+  displayPodcastTile(audioFilename, dateForSubtitle, 'Your Weekly Wrap Up', true);
+  
+  // Add shimmer effect for new podcast
+  addPodcastTileShimmer();
+  
+  console.log(`Podcast tile updated with new content: ${audioFilename}`);
+}
+
+// Show placeholder when no recent podcast is available
+function showPodcastPlaceholder() {
+  const podcastTile = document.getElementById('podcastTile');
+  const title = document.querySelector('.podcast-tile-title');
+  const subtitle = document.getElementById('podcastTileSubtitle');
+  const audioContainer = document.getElementById('podcastTileAudio');
+  const playButton = document.querySelector('.podcast-play-btn');
+  
+  if (!podcastTile || !title || !subtitle) {
+    console.error('Podcast tile elements not found for placeholder');
+    return;
+  }
+  
+  // Set placeholder content
+  title.textContent = 'Coming Soon - Your Weekly Podcast';
+  subtitle.textContent = 'Generate your first podcast using the Weekly button above';
+  
+  // Hide audio controls and play button for placeholder
+  if (audioContainer) {
+    audioContainer.style.display = 'none';
+  }
+  if (playButton) {
+    playButton.style.display = 'none';
+  }
+  
+  // Show the tile
+  podcastTile.style.display = 'block';
+  
+  console.log('Podcast tile showing placeholder - no recent podcast available');
+}
+
+// Add shimmer animation to podcast tile
+function addPodcastTileShimmer() {
+  const podcastTile = document.getElementById('podcastTile');
+  if (!podcastTile) return;
+  
+  // Don't add shimmer if one is already in progress
+  if (podcastTile.classList.contains('shimmer')) {
+    console.log('Shimmer already in progress, skipping');
+    return;
+  }
+  
+  // Add shimmer class
+  podcastTile.classList.add('shimmer');
+  
+  // Remove shimmer class after animation completes (1.5s duration)
+  setTimeout(() => {
+    podcastTile.classList.remove('shimmer');
+  }, 1500);
+  
+  console.log('Podcast tile shimmer animation triggered');
 }
