@@ -252,12 +252,12 @@ export function initializeWeeklyButton() {
           <span>Generating...</span>
         `;
 
-        // Import APIClient and generate weekly summary
+        // Import APIClient and generate weekly summary with audio
         const { APIClient } = await import('./api-client.js');
-        const result = await APIClient.generateWeeklySummary();
+        const result = await APIClient.generateWeeklyPodcast();
 
-        // Show the summary in a modal or popup
-        showWeeklySummaryModal(result.summary);
+        // Show the summary in a modal or popup with audio option
+        showWeeklySummaryModal(result.summary, result.audio_file_path);
 
       } catch (error) {
         console.error('Error generating weekly summary:', error);
@@ -275,14 +275,17 @@ export function initializeWeeklyButton() {
 }
 
 // Show weekly summary in a modal
-function showWeeklySummaryModal(summary) {
+function showWeeklySummaryModal(summary, audioFilePath = null) {
+  // Extract filename from path for API call
+  const audioFilename = audioFilePath ? audioFilePath.split('/').pop() : null;
+  
   // Create modal overlay
   const modal = document.createElement('div');
   modal.className = 'weekly-summary-modal';
   modal.innerHTML = `
     <div class="weekly-summary-content">
       <div class="weekly-summary-header">
-        <h2>Weekly Podcast Summary</h2>
+        <h2>🎙️ Weekly Podcast Summary</h2>
         <button class="weekly-summary-close" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -290,10 +293,27 @@ function showWeeklySummaryModal(summary) {
         </button>
       </div>
       <div class="weekly-summary-body">
-        <div class="weekly-summary-text">${summary.replace(/\n/g, '<br>')}</div>
+        ${audioFilename ? `
+          <div class="weekly-summary-audio">
+            <h3>🎧 Listen to Podcast</h3>
+            <audio controls preload="metadata" style="width: 100%; margin-bottom: 20px;">
+              <source src="/api/v1/weekly-podcast-audio/${audioFilename}" type="audio/mpeg">
+              Your browser does not support the audio element.
+            </audio>
+            <div class="audio-controls">
+              <button class="download-audio-btn" onclick="downloadPodcastAudio('${audioFilename}')">
+                📥 Download MP3
+              </button>
+            </div>
+          </div>
+        ` : ''}
+        <div class="weekly-summary-text">
+          <h3>📝 Transcript</h3>
+          ${summary.replace(/\n/g, '<br>')}
+        </div>
       </div>
       <div class="weekly-summary-footer">
-        <button class="weekly-summary-copy-btn">Copy to Clipboard</button>
+        <button class="weekly-summary-copy-btn">Copy Text</button>
       </div>
     </div>
   `;
@@ -367,11 +387,53 @@ function showWeeklySummaryModal(summary) {
       flex: 1;
     }
 
+    .weekly-summary-audio {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .weekly-summary-audio h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-dark-color);
+    }
+
+    .audio-controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .download-audio-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .download-audio-btn:hover {
+      background: #218838;
+    }
+
     .weekly-summary-text {
       font-size: 1rem;
       line-height: 1.6;
       color: var(--text-dark-color);
       white-space: pre-wrap;
+    }
+
+    .weekly-summary-text h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-dark-color);
     }
 
     .weekly-summary-footer {
@@ -452,3 +514,30 @@ function showWeeklySummaryModal(summary) {
   // Add to DOM
   document.body.appendChild(modal);
 }
+
+// Global function to download podcast audio
+window.downloadPodcastAudio = async function(filename) {
+  try {
+    const { APIClient } = await import('./api-client.js');
+    const response = await APIClient.getWeeklyPodcastAudio(filename);
+    
+    // Create blob from response
+    const blob = await response.blob();
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+  } catch (error) {
+    console.error('Error downloading audio:', error);
+    alert('Failed to download audio file');
+  }
+};

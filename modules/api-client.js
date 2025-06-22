@@ -327,7 +327,7 @@ export class APIClient {
     return response;
   }
 
-  // Weekly summary endpoint
+  // Weekly summary endpoint (text only)
   static async generateWeeklySummary() {
     const user = authManager.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
@@ -345,5 +345,36 @@ export class APIClient {
     }
 
     return await response.json();
+  }
+
+  // Weekly podcast endpoint (text + audio)
+  static async generateWeeklyPodcast() {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/generate-weekly-podcast`, {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: user.id,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to generate weekly podcast');
+    }
+
+    return await response.json();
+  }
+
+  // Download weekly podcast audio
+  static async getWeeklyPodcastAudio(filename) {
+    const response = await fetch(`${API_BASE_URL}/weekly-podcast-audio/${filename}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to download podcast audio');
+    }
+    
+    return response;
   }
 }
