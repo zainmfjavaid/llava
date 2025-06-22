@@ -178,7 +178,6 @@ export function initializeAuthUI() {
     }
     
     // Initialize landing page functionality
-    await initializeLandingPage();
     initializeSidebarHomeButtons();
     addBackToHomeButton();
     // Re-initialize all app modules now that the main UI is visible (fix auto-resize and event bindings)

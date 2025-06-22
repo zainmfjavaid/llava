@@ -236,9 +236,20 @@ export function updateHomeButtonStates() {
 export function initializeWeeklyButton() {
   const weeklyBtn = document.getElementById('weeklyBtn');
   
-  if (weeklyBtn) {
+  if (weeklyBtn && !weeklyBtn.hasAttribute('data-initialized')) {
+    console.log('Initializing weekly button event listener');
+    // Mark as initialized to prevent duplicate event listeners
+    weeklyBtn.setAttribute('data-initialized', 'true');
+    
     weeklyBtn.addEventListener('click', async () => {
+      // Prevent multiple concurrent generations
+      if (weeklyBtn.disabled) {
+        console.log('Weekly generation already in progress, ignoring click');
+        return;
+      }
+      
       try {
+        console.log('Weekly podcast generation started');
         // Show loading state
         const originalContent = weeklyBtn.innerHTML;
         weeklyBtn.disabled = true;
