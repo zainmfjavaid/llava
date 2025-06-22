@@ -15,6 +15,9 @@ export async function initializeLandingPage() {
 
   // Initialize weekly summary button
   initializeWeeklyButton();
+  
+  // Initialize podcast tile
+  initializePodcastTile();
 }
 
 // Add back to home functionality
@@ -665,3 +668,188 @@ window.downloadPodcastAudio = async function(filename) {
     alert(`Failed to download audio file: ${error.message}`);
   }
 };
+
+// Initialize podcast tile functionality
+export function initializePodcastTile() {
+  console.log('Initializing podcast tile...');
+  
+  const podcastTile = document.getElementById('podcastTile');
+  const playBtn = document.getElementById('podcastPlayBtn');
+  const audioContainer = document.getElementById('podcastTileAudio');
+  const audioSource = document.getElementById('podcastAudioSource');
+  const subtitle = document.getElementById('podcastTileSubtitle');
+  
+  if (!podcastTile || !playBtn || !audioContainer || !audioSource || !subtitle) {
+    console.error('Podcast tile elements not found');
+    return;
+  }
+  
+  // Load the most recent podcast
+  loadMostRecentPodcast();
+  
+  // Handle play button click
+  playBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const audio = audioContainer.querySelector('audio');
+    const playIcon = playBtn.querySelector('.play-icon');
+    const pauseIcon = playBtn.querySelector('.pause-icon');
+    
+    if (audio.paused) {
+      audio.play();
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = 'block';
+    } else {
+      audio.pause();
+      playIcon.style.display = 'block';
+      pauseIcon.style.display = 'none';
+    }
+  });
+  
+  // Handle tile click (show/hide audio controls)
+  podcastTile.addEventListener('click', (e) => {
+    // Don't toggle if clicking the play button
+    if (e.target.closest('.podcast-play-btn')) return;
+    
+    if (audioContainer.style.display === 'none') {
+      audioContainer.style.display = 'block';
+    } else {
+      audioContainer.style.display = 'none';
+    }
+  });
+}
+
+// Load the most recent podcast from the audio files directory
+async function loadMostRecentPodcast() {
+  try {
+    console.log('Loading most recent podcast...');
+    
+    // Try to get the user ID for API calls
+    const userId = authManager.getCurrentUser()?.id;
+    if (!userId) {
+      console.warn('No user ID available for podcast loading');
+      return;
+    }
+    
+    // Call the backend to get the most recent podcast file
+    const response = await fetch(`http://localhost:8081/v1/get-recent-podcast/${userId}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      displayPodcastTile(data.filename, data.created_date, data.summary_preview);
+    } else {
+      // Fallback: try to load from local files
+      await loadPodcastFromLocalFiles();
+    }
+    
+  } catch (error) {
+    console.error('Error loading recent podcast:', error);
+    await loadPodcastFromLocalFiles();
+  }
+}
+
+// Fallback method to load podcast from local files
+async function loadPodcastFromLocalFiles() {
+  try {
+    // List of known audio files (this could be made dynamic)
+    const audioFiles = [
+      'weekly_podcast_1750559534.mp3',
+      'weekly_podcast_1750558435.mp3',
+      'weekly_podcast_1750558064.mp3',
+      'weekly_podcast_1750557525.mp3',
+      'weekly_podcast_1750556893.mp3'
+    ];
+    
+    // Find the most recent one that exists
+    for (const filename of audioFiles) {
+      try {
+        // Test if the file exists by trying to load it
+        const testAudio = new Audio(`llava-audio:${filename}`);
+        await new Promise((resolve, reject) => {
+          testAudio.addEventListener('canplaythrough', resolve, { once: true });
+          testAudio.addEventListener('error', reject, { once: true });
+          testAudio.load();
+        });
+        
+        // If we get here, the file exists
+        const timestamp = filename.match(/(\d+)/)?.[1];
+        const date = timestamp ? new Date(parseInt(timestamp) * 1000).toLocaleDateString() : 'Recent';
+        displayPodcastTile(filename, date, 'Weekly podcast summary with Liam & Daniel');
+        return;
+        
+      } catch (fileError) {
+        console.log(`File ${filename} not accessible, trying next...`);
+        continue;
+      }
+    }
+    
+    // If no files found, hide the tile
+    console.log('No accessible podcast files found');
+    hidePodcastTile();
+    
+  } catch (error) {
+    console.error('Error loading podcast from local files:', error);
+    hidePodcastTile();
+  }
+}
+
+// Display the podcast tile with the given information
+function displayPodcastTile(filename, date, summaryPreview) {
+  const podcastTile = document.getElementById('podcastTile');
+  const subtitle = document.getElementById('podcastTileSubtitle');
+  const audioSource = document.getElementById('podcastAudioSource');
+  const audio = document.querySelector('#podcastTileAudio audio');
+  
+  if (!podcastTile || !subtitle || !audioSource || !audio) {
+    console.error('Podcast tile elements not found for display');
+    return;
+  }
+  
+  // Update subtitle with date and preview
+  subtitle.textContent = `${date} • ${summaryPreview || 'Weekly podcast summary'}`;
+  
+  // Set audio source
+  audioSource.src = `llava-audio:${filename}`;
+  audio.load();
+  
+  // Add audio event listeners
+  audio.addEventListener('ended', () => {
+    const playIcon = document.querySelector('.podcast-play-btn .play-icon');
+    const pauseIcon = document.querySelector('.podcast-play-btn .pause-icon');
+    if (playIcon && pauseIcon) {
+      playIcon.style.display = 'block';
+      pauseIcon.style.display = 'none';
+    }
+  });
+  
+  audio.addEventListener('pause', () => {
+    const playIcon = document.querySelector('.podcast-play-btn .play-icon');
+    const pauseIcon = document.querySelector('.podcast-play-btn .pause-icon');
+    if (playIcon && pauseIcon) {
+      playIcon.style.display = 'block';
+      pauseIcon.style.display = 'none';
+    }
+  });
+  
+  audio.addEventListener('play', () => {
+    const playIcon = document.querySelector('.podcast-play-btn .play-icon');
+    const pauseIcon = document.querySelector('.podcast-play-btn .pause-icon');
+    if (playIcon && pauseIcon) {
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = 'block';
+    }
+  });
+  
+  // Show the tile
+  podcastTile.style.display = 'block';
+  
+  console.log(`Podcast tile displayed for: ${filename}`);
+}
+
+// Hide the podcast tile if no recent podcast is available
+function hidePodcastTile() {
+  const podcastTile = document.getElementById('podcastTile');
+  if (podcastTile) {
+    podcastTile.style.display = 'none';
+  }
+  console.log('Podcast tile hidden - no recent podcast available');
+}
