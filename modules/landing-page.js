@@ -296,17 +296,32 @@ function showWeeklySummaryModal(summary, audioFilePath = null) {
         ${audioFilename ? `
           <div class="weekly-summary-audio">
             <h3>🎧 Listen to Podcast</h3>
-            <audio controls preload="metadata" style="width: 100%; margin-bottom: 20px;">
-              <source src="/api/v1/weekly-podcast-audio/${audioFilename}" type="audio/mpeg">
+            <audio controls preload="metadata" style="width: 100%; margin-bottom: 20px;" 
+                   onerror="console.error('Audio load error:', this.error)"
+                   onloadstart="console.log('Audio load started')"
+                   oncanplay="console.log('Audio can play')"
+                   onloadeddata="console.log('Audio data loaded')">
+              <source src="/v1/weekly-podcast-audio/${audioFilename}" type="audio/mpeg"
+                      onerror="console.error('Audio source error for:', this.src)">
               Your browser does not support the audio element.
             </audio>
             <div class="audio-controls">
               <button class="download-audio-btn" onclick="downloadPodcastAudio('${audioFilename}')">
                 📥 Download MP3
               </button>
+              <span style="font-size: 0.8em; color: #666; margin-left: 10px;">
+                File: ${audioFilename}
+              </span>
             </div>
           </div>
-        ` : ''}
+        ` : `
+          <div class="weekly-summary-no-audio">
+            <h3>⚠️ Audio Generation Unavailable</h3>
+            <p style="margin: 0; color: #666; font-size: 0.9em;">
+              Audio couldn't be generated (likely due to ElevenLabs quota limits). You can still read the podcast transcript below.
+            </p>
+          </div>
+        `}
         <div class="weekly-summary-text">
           <h3>📝 Transcript</h3>
           ${summary.replace(/\n/g, '<br>')}
@@ -420,6 +435,21 @@ function showWeeklySummaryModal(summary, audioFilePath = null) {
 
     .download-audio-btn:hover {
       background: #218838;
+    }
+
+    .weekly-summary-no-audio {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+    }
+
+    .weekly-summary-no-audio h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #856404;
     }
 
     .weekly-summary-text {
