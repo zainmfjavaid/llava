@@ -6,6 +6,31 @@ import { chatManager } from './chat-manager.js';
 import { clearTranscript } from './transcript-handler.js';
 import { resetNotesGenerationState } from './notes-processor.js';
 
+// Helper function to generate the correct audio URL based on environment
+function getAudioUrl(filename) {
+  // Check if we're in production (similar logic to api-client.js)
+  const is_production = true; // Should match the flag in api-client.js
+  
+  if (is_production) {
+    // In production, use the API endpoint
+    return `https://dev.llava.io/v1/weekly-podcast-audio/${filename}`;
+  } else {
+    // In development, check if we're in Electron (custom protocol available)
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      return `llava-audio:${filename}`;
+    } else {
+      // In development browser, use localhost API
+      return `http://localhost:8081/v1/weekly-podcast-audio/${filename}`;
+    }
+  }
+}
+
+// Helper function to get the correct API base URL
+function getApiBaseUrl() {
+  const is_production = true; // Should match the flag in api-client.js
+  return is_production ? 'https://dev.llava.io/v1' : 'http://localhost:8081/v1';
+}
+
 export async function initializeLandingPage() {
   // Initialize chat functionality
   chatManager.initialize();
@@ -298,7 +323,9 @@ window.testAudioPlayback = async function(filename) {
   console.log('Testing audio playback for:', filename);
   try {
     // Create a new audio element programmatically
-    const audio = new Audio(`llava-audio:${filename}`);
+    const audioUrl = getAudioUrl(filename);
+    console.log('Using audio URL:', audioUrl);
+    const audio = new Audio(audioUrl);
     
     // Add event listeners for debugging
     audio.addEventListener('loadstart', () => console.log('Test audio: Load started'));
@@ -322,7 +349,7 @@ window.testAudioPlayback = async function(filename) {
     }, 3000);
     
   } catch (error) {
-    console.error('Error testing audio playback:', error);
+    console.error('Error testing audio playbook:', error);
     alert(`Failed to test audio: ${error.message}`);
   }
 };
@@ -366,14 +393,15 @@ window.downloadPodcastAudio = async function(filename) {
       console.log('API endpoint failed, trying direct file access:', apiError.message);
     }
     
-    // Fallback: Use custom protocol for direct file access
-    console.log('Using direct file access via custom protocol...');
+    // Fallback: Use direct URL
+    console.log('Using direct URL for download...');
+    const audioUrl = getAudioUrl(filename);
     const a = document.createElement('a');
-    a.href = `llava-audio:${filename}`;
+    a.href = audioUrl;
     a.download = filename;
     document.body.appendChild(a);
     
-    console.log('Triggering download via custom protocol...');
+    console.log('Triggering download via direct URL...');
     a.click();
     
     // Cleanup
@@ -463,7 +491,8 @@ async function loadMostRecentPodcast() {
     }
     
     // Call the backend to get the most recent podcast file
-    const response = await fetch(`http://localhost:8081/v1/get-recent-podcast/${userId}`);
+    const apiBaseUrl = getApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/get-recent-podcast/${userId}`);
     
     if (response.ok) {
       const data = await response.json();
@@ -516,7 +545,9 @@ function displayPodcastTile(filename, date, summaryPreview, updateTitle = false)
   subtitle.textContent = `${date} • ${summaryPreview || 'Weekly podcast summary'}`;
   
   // Set audio source
-  audioSource.src = `llava-audio:${filename}`;
+  const audioUrl = getAudioUrl(filename);
+  console.log('Setting audio source to:', audioUrl);
+  audioSource.src = audioUrl;
   audio.load();
   
   // Add audio event listeners

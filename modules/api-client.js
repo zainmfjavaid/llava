@@ -2,9 +2,9 @@
 import { authManager, authenticatedFetch } from './auth-manager.js';
 
 // Toggle production vs development API endpoint
-const is_production = false; // set to true in production builds
+const is_production = true; // set to true in production builds
 const API_BASE_URL = is_production
-  ? 'https://api.llava.io/v1'
+  ? 'https://dev.llava.io/v1'
   : 'http://localhost:8081/v1';
 
 export class APIClient {
