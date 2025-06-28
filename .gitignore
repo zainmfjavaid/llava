@@ -6,3 +6,4 @@ build-llava.sh
 out/
 dist/
 build-mac.sh
+.DS_Store

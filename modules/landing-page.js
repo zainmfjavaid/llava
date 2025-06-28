@@ -9,7 +9,7 @@ import { resetNotesGenerationState } from './notes-processor.js';
 // Helper function to generate the correct audio URL based on environment
 function getAudioUrl(filename) {
   // Check if we're in production (similar logic to api-client.js)
-  const is_production = true; // Should match the flag in api-client.js
+  const is_production = false; // Should match the flag in api-client.js
   
   if (is_production) {
     // In production, use the API endpoint
@@ -27,7 +27,7 @@ function getAudioUrl(filename) {
 
 // Helper function to get the correct API base URL
 function getApiBaseUrl() {
-  const is_production = true; // Should match the flag in api-client.js
+  const is_production = false; // Should match the flag in api-client.js
   return is_production ? 'https://dev.llava.io/v1' : 'http://localhost:8081/v1';
 }
 

@@ -6,6 +6,7 @@ import { authManager } from './auth-manager.js';
 import { processGeneratedNotes } from './markdown-processor.js';
 import { handleNotesInput, handleNotesKeydown, initializeNotesAsEditable } from './notes-editor.js';
 import { initializeStreamingNotesArea, handleStreamingResponse } from './streaming-handler.js';
+import { ExportHandler } from './export-handler.js';
 
 // Track current note session for backend updates
 let currentNoteId = null;
@@ -15,6 +16,9 @@ let resizeTimeout = null;
 let notesGenerated = false; // Flag to track if AI notes have been generated
 let isGeneratingNotes = false; // Flag to prevent title override during notes generation
 let noteGenerationMode = 'standard'; // Default mode for note generation
+
+// Initialize export handler
+let exportHandler = null;
 
 // Load citation titles for note references
 async function loadCitationTitles(container) {
@@ -63,11 +67,32 @@ export async function setCurrentNoteId(noteId) {
   currentNoteId = noteId;
   notesGenerated = false; // Reset when new note is created
   
+  // Also expose it globally for the export handler
+  window.currentNoteId = noteId;
+  // Store on the notesProcessor object for consistency
+  if (!window.notesProcessor) {
+    window.notesProcessor = {};
+  }
+  window.notesProcessor.currentNoteId = noteId;
+  
+  // Hide export button when note changes
+  if (exportHandler) {
+    exportHandler.hideExportButton();
+  }
+  
   // Sync with noteStorage system
   if (noteId) {
     try {
       const note = await APIClient.getNote(noteId);
       noteStorage.setCurrentNote(note);
+      
+      // Check if this note already has AI-enhanced notes and show export button
+      if (note.is_ai_enhanced && note.notes && note.notes.trim()) {
+        notesGenerated = true; // Mark as generated since it's AI-enhanced
+        if (exportHandler) {
+          exportHandler.showExportButton();
+        }
+      }
     } catch (error) {
       console.error('Failed to sync note with storage system:', error);
     }
@@ -111,6 +136,17 @@ export function resetNotesGenerationState() {
   isGeneratingNotes = false; // Clear the generation flag
   currentNoteId = null;
   noteGenerationMode = 'standard'; // Reset to default mode
+  
+  // Reset global references
+  window.currentNoteId = null;
+  if (window.notesProcessor) {
+    window.notesProcessor.currentNoteId = null;
+  }
+  
+  // Hide export button
+  if (exportHandler) {
+    exportHandler.hideExportButton();
+  }
   
   // Reset generate notes button state
   if (elements.generateNotesBtn) {
@@ -376,6 +412,12 @@ export async function generateNotes() {
       resumeText.style.display = 'none';
       elements.recordingControls.classList.remove('expanded');
     }
+    
+    // Show export button if notes were generated successfully
+    if (exportHandler && currentNoteId) {
+      exportHandler.showExportButton();
+    }
+    
     updateSeparatorVisibility();
     
   } catch (error) {
@@ -400,6 +442,9 @@ export function initializeNotesListeners() {
   
   // Initialize the notes input as editable with markdown support
   initializeNotesAsEditable();
+  
+  // Initialize export handler
+  exportHandler = new ExportHandler();
   
   // Add title input listener for debounced updates and auto-resize
   elements.titleInput.addEventListener('input', () => {

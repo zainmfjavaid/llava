@@ -94,6 +94,16 @@
     order: 2;
 }
 
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.recording-controls.transcript-open .right-controls {
+    gap: 0;
+}
+
 .left-controls {
     display: flex;
     align-items: center;
@@ -116,6 +126,11 @@
     background: transparent;
     box-shadow: none;
     padding: 0;
+}
+
+/* Unset width of controls-row when export button is visible to make space */
+.controls-bottom-row:has(.export-button-wrapper:not([style*="display: none"])) .controls-row {
+    width: unset;
 }
 
 /* Audio Visualizer */
@@ -274,6 +289,17 @@
 /* Hide separator when generate notes button is not visible */
 .generate-notes-btn[style*="display: none"] + .separator,
 .separator:has(+ .generate-notes-btn[style*="display: none"]) {
+    display: none !important;
+}
+
+/* Show export separator when transcript is open and export button is visible */
+.recording-controls.transcript-open .export-separator {
+    display: block !important;
+}
+
+/* Hide export separator when export button is not visible */
+.export-button-wrapper[style*="display: none"] ~ .export-separator,
+.export-separator:has(+ .export-button-wrapper[style*="display: none"]) {
     display: none !important;
 }
 
@@ -592,4 +618,116 @@
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
+}
+
+/* Export button styling */
+.export-button-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.recording-controls.transcript-open .export-button-wrapper {
+    margin-left: 0;
+}
+
+.export-btn {
+    background: #9f7aea;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 0.5rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12), 2px 0 8px rgba(0,0,0,0.08), -2px 0 8px rgba(0,0,0,0.08), 0 -2px 8px rgba(0,0,0,0.08);
+    height: 50px;
+    margin-left: 0.5rem;
+}
+
+.export-btn:hover {
+    background: #805ad5;
+}
+
+.export-btn:active {
+    transform: translateY(0);
+}
+
+.export-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.recording-controls.transcript-open .export-btn {
+    background: transparent;
+    color: #9f7aea;
+    box-shadow: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 15px;
+    height: auto;
+    margin-left: 0;
+}
+
+.recording-controls.transcript-open .export-btn:hover {
+    background: rgba(159, 122, 234, 0.1);
+    color: #805ad5;
+    transform: none;
+    box-shadow: none;
+}
+
+.export-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.export-option {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: white;
+    color: #2d3748;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background-color 0.2s ease;
+    text-align: left;
+}
+
+.export-option:hover {
+    background: #f7fafc;
+}
+
+.export-option:active {
+    background: #edf2f7;
+}
+
+.export-option svg {
+    flex-shrink: 0;
+    color: #718096;
+    opacity: 0.8;
+}
+
+.export-option:first-child {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.export-option:last-child {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
 }

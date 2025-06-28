@@ -2,7 +2,7 @@
 import { authManager, authenticatedFetch } from './auth-manager.js';
 
 // Toggle production vs development API endpoint
-const is_production = true; // set to true in production builds
+const is_production = false; // set to true in production builds
 const API_BASE_URL = is_production
   ? 'https://dev.llava.io/v1'
   : 'http://localhost:8081/v1';
@@ -377,6 +377,30 @@ export class APIClient {
     
     if (!response.ok) {
       throw new Error('Failed to get podcast audio');
+    }
+    
+    return response;
+  }
+
+  // Export note as PDF
+  static async exportNotePDF(noteId) {
+    const response = await authenticatedFetch(`${API_BASE_URL}/notes/${noteId}/export/pdf`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to export note as PDF');
+    }
+    
+    return response;
+  }
+
+  // Export note as DOCX
+  static async exportNoteDOCX(noteId) {
+    const response = await authenticatedFetch(`${API_BASE_URL}/notes/${noteId}/export/docx`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to export note as DOCX');
     }
     
     return response;

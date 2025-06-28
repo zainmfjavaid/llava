@@ -381,15 +381,49 @@
                     <span class="resume-text" style="display: none;">Resume</span>
                   </div>
                 </div>
-                
-                <div class="separator" id="separator">|</div>
-                
-                <button class="generate-notes-btn" id="generateNotesBtn">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>
-                  </svg>
-                  Generate notes
-                </button>
+                <div class="right-controls">
+                  <div class="separator" id="separator">|</div>
+                  
+                  <button class="generate-notes-btn" id="generateNotesBtn">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>
+                    </svg>
+                    Generate notes
+                  </button>
+                  
+                  <div class="separator export-separator" id="exportSeparator" style="display: none;">|</div>
+                  
+                  <div class="export-button-wrapper" id="exportButtonWrapper" style="display: none;">
+                    <button class="export-btn" id="exportBtn">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2M18 20H6V4H13V9H18V20M12 16L16 12H13.5V8H10.5V12H8L12 16Z"/>
+                      </svg>
+                      Export
+                    </button>
+                    <div class="export-dropdown" id="exportDropdown" style="display: none;">
+                      <button class="export-option" id="exportCopy">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M7,7H17V5H19V19H5V5H7V7Z"/>
+                        </svg>
+                        Copy to clipboard
+                      </button>
+                      <button class="export-option" id="exportPDF">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2M18 20H6V4H13V9H18V20Z" fill="#d73027"/>
+                          <path d="M8 12H10V16H8V12M12 12H14C14.55 12 15 12.45 15 13V15C15 15.55 14.55 16 14 16H12V12M10 14H11V15H10V14M13 14H14V15H13V14M12 16H14V17H12V16"/>
+                        </svg>
+                        Export as PDF
+                      </button>
+                      <button class="export-option" id="exportDOCX">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.11 4.89 22 6 22H18C19.11 22 20 21.11 20 20V8L14 2M18 20H6V4H13V9H18V20Z" fill="#2b579a"/>
+                          <path d="M8 12L9 15L10 12H11L9.5 16H8.5L8 14.5L7.5 16H6.5L5 12H6L7 15L8 12M12 12H14V13H12V12M12 14H14V15H12V14M12 16H14V17H12V16"/>
+                        </svg>
+                        Export as DOCX
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div class="transcript-content-wrapper" id="transcriptContentWrapper">
@@ -499,7 +533,7 @@
               </svg>
               <!-- Expand SVG, shown by default when collapsed -->
               <svg id="sidebar-toggle-expand-chat" width="21" height="21" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M17.5 2C17.7761 2 18 2.5 18 2.5V17.5C18 17.7761 17.7761 18 17.5 18C17.2239 18 17 17.7761 17 17.5V2.5C17 2.22386 17.2239 2 17.5 2ZM8.63003 4.66366C8.81578 4.45933 9.13201 4.44428 9.33634 4.63003L14.8363 9.63003C14.9406 9.72479 15 9.85913 15 10C15 10.1409 14.9406 10.2752 14.8363 10.37L9.33634 15.37C9.13201 15.5557 8.81578 15.5407 8.63003 15.3363C8.44428 15.132 8.45934 14.8158 8.66366 14.63L13.2067 10.5L2.5 10.5C2.22386 10.5 2 10.2761 2 10C2 9.72386 2.22386 9.5 2.5 9.5L13.2067 9.5L8.66366 5.36997C8.45934 5.18422 8.44428 4.86799 8.63003 4.66366Z"></path>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M17.5 2C17.7761 2 18 2.22386 18 2.5V17.5C18 17.7761 17.7761 18 17.5 18C17.2239 18 17 17.7761 17 17.5V2.5C17 2.22386 17.2239 2 17.5 2ZM8.63003 4.66366C8.81578 4.45933 9.13201 4.44428 9.33634 4.63003L14.8363 9.63003C14.9406 9.72479 15 9.85913 15 10C15 10.1409 14.9406 10.2752 14.8363 10.37L9.33634 15.37C9.13201 15.5557 8.81578 15.5407 8.63003 15.3363C8.44428 15.132 8.45934 14.8158 8.66366 14.63L13.2067 10.5L2.5 10.5C2.22386 10.5 2 10.2761 2 10C2 9.72386 2.22386 9.5 2.5 9.5L13.2067 9.5L8.66366 5.36997C8.45934 5.18422 8.44428 4.86799 8.63003 4.66366Z"></path>
               </svg>
             </button>
 
