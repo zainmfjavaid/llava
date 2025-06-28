@@ -435,6 +435,9 @@ export function initializePodcastTile() {
   // Load the most recent podcast
   loadMostRecentPodcast();
   
+  // Initialize podcast menu
+  initializePodcastMenu();
+  
   // Handle play button click
   playBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -455,8 +458,14 @@ export function initializePodcastTile() {
   
   // Handle tile click (show/hide audio controls)
   podcastTile.addEventListener('click', (e) => {
-    // Don't toggle if clicking the play button
-    if (e.target.closest('.podcast-play-btn')) return;
+    // Don't toggle if clicking the play button or menu button
+    if (e.target.closest('.podcast-play-btn') || e.target.closest('.podcast-menu-btn')) return;
+    
+    // Don't show audio controls if we're in placeholder mode
+    if (podcastTile.getAttribute('data-placeholder') === 'true') {
+      console.log('In placeholder mode - skipping audio controls toggle');
+      return;
+    }
     
     if (audioContainer.style.display === 'none') {
       audioContainer.style.display = 'block';
@@ -490,24 +499,201 @@ async function loadMostRecentPodcast() {
       return;
     }
     
-    // Call the backend to get the most recent podcast file
-    const apiBaseUrl = getApiBaseUrl();
-    const response = await fetch(`${apiBaseUrl}/get-recent-podcast/${userId}`);
+    // Use the new API client method
+    const podcastData = await APIClient.getRecentPodcast();
     
-    if (response.ok) {
-      const data = await response.json();
-      displayPodcastTile(data.filename, data.created_date, data.summary_preview);
+    if (podcastData) {
+      displayPodcastTile(podcastData.filename, podcastData.created_date, podcastData.summary_preview);
     } else {
       // No podcast found, show placeholder
+      console.log('No podcasts found for user - showing placeholder');
       showPodcastPlaceholder();
     }
     
   } catch (error) {
-    console.error('Error loading recent podcast:', error);
+    // Check if this is just a "no podcasts found" error (expected)
+    if (error.message && error.message.includes('No podcast files found')) {
+      console.log('No podcasts found for user - showing placeholder');
+    } else {
+      // Log unexpected errors
+      console.error('Unexpected error loading recent podcast:', error);
+    }
     showPodcastPlaceholder();
   }
 }
 
+// Initialize podcast menu functionality
+function initializePodcastMenu() {
+  const menuBtn = document.getElementById('podcastMenuBtn');
+  const menuDropdown = document.getElementById('podcastMenuDropdown');
+  const downloadBtn = document.getElementById('downloadPodcastBtn');
+  const viewAllBtn = document.getElementById('viewAllPodcastsBtn');
+  
+  if (!menuBtn || !menuDropdown) {
+    console.warn('Podcast menu elements not found');
+    return;
+  }
+  
+  // Toggle menu dropdown
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isVisible = menuDropdown.style.display !== 'none';
+    menuDropdown.style.display = isVisible ? 'none' : 'block';
+  });
+  
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.podcast-menu-container')) {
+      menuDropdown.style.display = 'none';
+    }
+  });
+  
+  // Handle download button
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      menuDropdown.style.display = 'none';
+      
+      try {
+        const audioSource = document.getElementById('podcastAudioSource');
+        if (audioSource && audioSource.src) {
+          const filename = audioSource.src.split('/').pop();
+          await window.downloadPodcastAudio(filename);
+        } else {
+          console.warn('No audio source available for download');
+        }
+      } catch (error) {
+        console.error('Error downloading podcast:', error);
+      }
+    });
+  }
+  
+  // Handle view all button
+  if (viewAllBtn) {
+    viewAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuDropdown.style.display = 'none';
+      
+      // For now, just load all podcasts (future: could open a modal or navigate to a new view)
+      loadAllPodcasts();
+      console.log('View all podcasts clicked - functionality to be enhanced');
+    });
+  }
+}
+
+// Load and display all podcasts for the user
+async function loadAllPodcasts(page = 1, limit = 10) {
+  try {
+    console.log('Loading all podcasts...');
+    
+    const userId = authManager.getCurrentUser()?.id;
+    if (!userId) {
+      console.warn('No user ID available for podcast loading');
+      return;
+    }
+    
+    const response = await APIClient.getPodcasts(page, limit);
+    displayPodcastList(response);
+    
+  } catch (error) {
+    console.error('Error loading all podcasts:', error);
+  }
+}
+
+// Display a list of podcasts
+function displayPodcastList(podcastData) {
+  const { podcasts, total, page, total_pages } = podcastData;
+  
+  // For now, just display the most recent podcast in the existing tile
+  // Later we can enhance this to show a full podcast list/grid
+  if (podcasts && podcasts.length > 0) {
+    const mostRecent = podcasts[0];
+    
+    // Convert podcast data to expected format
+    const displayData = {
+      filename: mostRecent.audio_filename,
+      created_date: formatPodcastDate(mostRecent.date_created),
+      summary_preview: mostRecent.title
+    };
+    
+    displayPodcastTile(displayData.filename, displayData.created_date, displayData.summary_preview);
+  } else {
+    showPodcastPlaceholder();
+  }
+}
+
+// Helper function to format podcast date
+function formatPodcastDate(isoDateString) {
+  try {
+    // Handle different date formats that might come from the backend
+    let date;
+    
+    if (!isoDateString) {
+      console.warn('No date string provided');
+      return 'Unknown Date';
+    }
+    
+    // Try parsing as ISO string first
+    date = new Date(isoDateString);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', isoDateString);
+      return 'Unknown Date';
+    }
+    
+    // Check if we got the Unix epoch (1970-01-01) which indicates a parsing issue
+    if (date.getFullYear() === 1970) {
+      console.warn('Date parsed to 1970, likely a parsing issue with:', isoDateString);
+      // Try to parse as timestamp if it's a number string
+      if (!isNaN(isoDateString)) {
+        date = new Date(parseInt(isoDateString));
+      } else {
+        return 'Unknown Date';
+      }
+    }
+    
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  } catch (error) {
+    console.warn('Error formatting date:', error, 'Input:', isoDateString);
+    return 'Unknown Date';
+  }
+}
+
+// Delete a podcast
+async function deletePodcast(podcastId) {
+  try {
+    await APIClient.deletePodcast(podcastId);
+    console.log('Podcast deleted successfully');
+    
+    // Reload podcasts
+    loadMostRecentPodcast();
+    
+  } catch (error) {
+    console.error('Error deleting podcast:', error);
+    throw error;
+  }
+}
+
+// Update podcast metadata
+async function updatePodcast(podcastId, updateData) {
+  try {
+    const updatedPodcast = await APIClient.updatePodcast(podcastId, updateData);
+    console.log('Podcast updated successfully:', updatedPodcast);
+    
+    // Reload podcasts to reflect changes
+    loadMostRecentPodcast();
+    
+    return updatedPodcast;
+  } catch (error) {
+    console.error('Error updating podcast:', error);
+    throw error;
+  }
+}
 
 // Display the podcast tile with the given information
 function displayPodcastTile(filename, date, summaryPreview, updateTitle = false) {
@@ -524,25 +710,53 @@ function displayPodcastTile(filename, date, summaryPreview, updateTitle = false)
   
   // Always update title with proper date format
   let dateForTitle;
-  const timestampMatch = filename.match(/(\d+)/);
-  if (timestampMatch) {
-    const timestamp = parseInt(timestampMatch[1]);
-    dateForTitle = new Date(timestamp * 1000).toLocaleDateString('en-US', { 
-      month: '2-digit', 
-      day: '2-digit', 
-      year: '2-digit' 
-    });
+  
+  // Try to parse the date parameter first (since it's already formatted correctly)
+  if (date && date !== 'Unknown Date') {
+    try {
+      // Parse the formatted date (e.g., "December 28, 2024") back to a Date object
+      const parsedDate = new Date(date);
+      if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() > 1970) {
+        dateForTitle = parsedDate.toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: '2-digit' 
+        });
+      } else {
+        // Fallback to current date if parsing fails
+        dateForTitle = new Date().toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: '2-digit' 
+        });
+      }
+    } catch (error) {
+      // Fallback to current date if parsing fails
+      dateForTitle = new Date().toLocaleDateString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: '2-digit' 
+      });
+    }
   } else {
+    // Fallback to current date
     dateForTitle = new Date().toLocaleDateString('en-US', { 
       month: '2-digit', 
       day: '2-digit', 
       year: '2-digit' 
     });
   }
+  
   title.textContent = `The Lost Week Podcast ${dateForTitle}`;
   
   // Update subtitle with date and preview
   subtitle.textContent = `${date} • ${summaryPreview || 'Weekly podcast summary'}`;
+  
+  // Remove placeholder mode flag since we have a real podcast
+  podcastTile.removeAttribute('data-placeholder');
+  
+  // Restore pointer cursor for interactive podcast
+  podcastTile.style.cursor = 'pointer';
   
   // Set audio source
   const audioUrl = getAudioUrl(filename);
@@ -578,14 +792,19 @@ function displayPodcastTile(filename, date, summaryPreview, updateTitle = false)
     }
   });
   
-  // Show audio controls and play button for actual podcasts
+  // Show audio controls, play button, and menu button for actual podcasts
   const audioContainer = document.getElementById('podcastTileAudio');
   const playButton = document.querySelector('.podcast-play-btn');
+  const menuButton = document.getElementById('podcastMenuBtn');
+  
   if (audioContainer) {
     audioContainer.style.display = 'none'; // Initially hidden, can be toggled by clicking
   }
   if (playButton) {
     playButton.style.display = 'flex'; // Show play button for actual podcasts
+  }
+  if (menuButton) {
+    menuButton.style.display = 'flex'; // Show menu button for actual podcasts
   }
   
   // Show the tile
@@ -650,12 +869,30 @@ function showPodcastPlaceholder() {
   title.textContent = 'Coming Soon - Your Weekly Podcast';
   subtitle.textContent = 'Generate your first podcast using the Weekly button above';
   
-  // Hide audio controls and play button for placeholder
+  // Mark tile as being in placeholder mode
+  podcastTile.setAttribute('data-placeholder', 'true');
+  
+  // Change cursor to default (not pointer) for placeholder
+  podcastTile.style.cursor = 'default';
+  
+  // Clear any existing audio source
+  const audioSource = document.getElementById('podcastAudioSource');
+  if (audioSource) {
+    audioSource.src = '';
+  }
+  
+  // Hide audio controls, play button, and menu button for placeholder
   if (audioContainer) {
     audioContainer.style.display = 'none';
   }
   if (playButton) {
     playButton.style.display = 'none';
+  }
+  
+  // Hide the three-dot menu button when no podcast is available
+  const menuButton = document.getElementById('podcastMenuBtn');
+  if (menuButton) {
+    menuButton.style.display = 'none';
   }
   
   // Show the tile
@@ -685,3 +922,6 @@ function addPodcastTileShimmer() {
   
   console.log('Podcast tile shimmer animation triggered');
 }
+
+// Export new podcast management functions
+export { loadAllPodcasts, deletePodcast, updatePodcast, displayPodcastList, formatPodcastDate };

@@ -182,6 +182,27 @@
                         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                       </svg>
                     </button>
+                    <div class="podcast-menu-container">
+                      <button class="podcast-menu-btn" id="podcastMenuBtn" title="Podcast options">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
+                      </button>
+                      <div class="podcast-menu-dropdown" id="podcastMenuDropdown" style="display: none;">
+                        <button class="podcast-menu-item" id="downloadPodcastBtn">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                          </svg>
+                          Download
+                        </button>
+                        <button class="podcast-menu-item" id="viewAllPodcastsBtn">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                          </svg>
+                          View All
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="podcast-tile-audio" id="podcastTileAudio" style="display: none;">

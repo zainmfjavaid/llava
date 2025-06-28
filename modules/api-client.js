@@ -405,4 +405,129 @@ export class APIClient {
     
     return response;
   }
+
+  // Podcast management methods
+  static async getPodcasts(page = 1, limit = 10) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/podcasts?user_id=${user.id}&page=${page}&limit=${limit}`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to get podcasts');
+    }
+    
+    return await response.json();
+  }
+
+  static async getPodcast(podcastId) {
+    const response = await authenticatedFetch(`${API_BASE_URL}/podcasts/${podcastId}`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to get podcast');
+    }
+    
+    return await response.json();
+  }
+
+  static async updatePodcast(podcastId, updateData) {
+    const response = await authenticatedFetch(`${API_BASE_URL}/podcasts/${podcastId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update podcast');
+    }
+    
+    return await response.json();
+  }
+
+  static async deletePodcast(podcastId) {
+    const response = await authenticatedFetch(`${API_BASE_URL}/podcasts/${podcastId}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete podcast');
+    }
+    
+    return await response.json();
+  }
+
+  static async getRecentPodcast() {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Use the new podcasts endpoint to get the most recent podcast (page 1, limit 1)
+    const response = await authenticatedFetch(`${API_BASE_URL}/podcasts?user_id=${user.id}&page=1&limit=1`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null; // No podcast found
+      }
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to get recent podcast');
+    }
+    
+    const data = await response.json();
+    
+    // If no podcasts found, return null
+    if (!data.podcasts || data.podcasts.length === 0) {
+      return null;
+    }
+    
+    // Convert the podcast data to the format expected by the frontend
+    const podcast = data.podcasts[0];
+    return {
+      filename: podcast.audio_filename,
+      created_date: this.formatPodcastDate(podcast.date_created),
+      summary_preview: podcast.title
+    };
+  }
+
+  static formatPodcastDate(isoDateString) {
+    try {
+      // Handle different date formats that might come from the backend
+      let date;
+      
+      if (!isoDateString) {
+        console.warn('No date string provided');
+        return 'Unknown Date';
+      }
+      
+      // Try parsing as ISO string first
+      date = new Date(isoDateString);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', isoDateString);
+        return 'Unknown Date';
+      }
+      
+      // Check if we got the Unix epoch (1970-01-01) which indicates a parsing issue
+      if (date.getFullYear() === 1970) {
+        console.warn('Date parsed to 1970, likely a parsing issue with:', isoDateString);
+        // Try to parse as timestamp if it's a number string
+        if (!isNaN(isoDateString)) {
+          date = new Date(parseInt(isoDateString));
+        } else {
+          return 'Unknown Date';
+        }
+      }
+      
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      console.warn('Error formatting date:', error, 'Input:', isoDateString);
+      return 'Unknown Date';
+    }
+  }
 }
