@@ -180,8 +180,8 @@ export async function startRecording() {
     
     // Initialize and show right sidebar for new recording
     rightSidebarManager.initialize();
-    rightSidebarManager.setCurrentNote(null); // No note ID yet for new recording
-    rightSidebarManager.showSidebar(null); // Show sidebar in live mode
+    await rightSidebarManager.setCurrentNote(null); // No note ID yet for new recording
+    await rightSidebarManager.showSidebar(null); // Show sidebar in live mode
   } catch (error) {
     console.error('Failed to start transcription:', error);
     alert(`Error starting recording: ${error.message}`);

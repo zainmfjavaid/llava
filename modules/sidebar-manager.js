@@ -593,8 +593,8 @@ class SidebarManager {
     
     // Initialize and show right sidebar for Q&A
     rightSidebarManager.initialize();
-    rightSidebarManager.setCurrentNote(note.id);
-    rightSidebarManager.showSidebar(note.id);
+    await rightSidebarManager.setCurrentNote(note.id);
+    await rightSidebarManager.showSidebar(note.id);
   }
 
   // Refresh notes list (useful after creating/deleting notes)

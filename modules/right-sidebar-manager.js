@@ -1,6 +1,7 @@
 // right-sidebar-manager.js - Right sidebar Q&A functionality for transcript-specific conversations
 import { APIClient } from './api-client.js';
 import { getCurrentTranscript } from './transcript-handler.js';
+import { authManager } from './auth-manager.js';
 
 class RightSidebarManager {
   constructor() {
@@ -152,9 +153,10 @@ class RightSidebarManager {
     }
   }
 
-  showSidebar(noteId = null) {
+  async showSidebar(noteId = null) {
     if (!this.rightSidebar) return;
     
+    const previousNoteId = this.currentNoteId;
     this.currentNoteId = noteId;
     this.rightSidebar.classList.add('active');
     this.isVisible = true;
@@ -164,8 +166,11 @@ class RightSidebarManager {
     this.isCollapsed = collapsed;
     this.rightSidebar.classList.toggle('collapsed', collapsed);
     
-    // Clear previous conversation when showing for a different note
-    if (noteId && noteId !== this.currentNoteId) {
+    // Load persisted messages when showing for a different note
+    if (noteId && noteId !== previousNoteId) {
+      await this.loadPersistedMessages(noteId);
+    } else if (!noteId) {
+      // For live recordings, clear the conversation (no persistence yet)
       this.clearConversation();
     }
     
@@ -278,7 +283,7 @@ class RightSidebarManager {
     }
   }
 
-  addUserMessage(message) {
+  addUserMessage(message, addToHistory = true) {
     const messageElement = document.createElement('div');
     messageElement.className = 'qa-message user';
     messageElement.innerHTML = `
@@ -288,8 +293,10 @@ class RightSidebarManager {
     this.qaMessages.appendChild(messageElement);
     this.scrollToBottom();
     
-    // Add to history
-    this.qaHistory.push({ role: 'user', content: message });
+    // Add to history only if specified (not when loading persisted messages)
+    if (addToHistory) {
+      this.qaHistory.push({ role: 'user', content: message });
+    }
   }
 
   addAIMessage(message, isComplete = false) {
@@ -375,6 +382,7 @@ class RightSidebarManager {
               
               if (data.type === 'done') {
                 this.finalizeAIMessage(contentElement, content);
+                // Add to qaHistory for immediate context
                 this.qaHistory.push({ role: 'assistant', content: content });
                 return;
               } else if (data.content) {
@@ -392,6 +400,7 @@ class RightSidebarManager {
       
       // Fallback finalization
       this.finalizeAIMessage(contentElement, content);
+      // Add to qaHistory for immediate context
       this.qaHistory.push({ role: 'assistant', content: content });
       
     } catch (error) {
@@ -581,6 +590,71 @@ class RightSidebarManager {
     return div.innerHTML;
   }
 
+  async loadPersistedMessages(noteId) {
+    if (!authManager.isAuthenticated()) {
+      console.log('User not authenticated, skipping message loading');
+      return;
+    }
+
+    try {
+      const response = await APIClient.getMessagesForNote(noteId);
+      const messages = response.messages || [];
+      
+      console.log(`Loaded ${messages.length} persisted messages for note ${noteId}`);
+      
+      // Clear current history and UI
+      this.qaHistory = [];
+      if (this.qaMessages) {
+        const emptyState = this.qaMessages.querySelector('.qa-empty-state');
+        this.qaMessages.innerHTML = '';
+        if (emptyState) {
+          this.qaMessages.appendChild(emptyState);
+        }
+      }
+      
+      // Load messages into UI and history
+      for (const message of messages) {
+        if (message.role === 'user') {
+          this.addUserMessage(message.content, false); // false = don't add to history
+        } else if (message.role === 'assistant') {
+          // Create AI message element manually to ensure proper markdown rendering
+          const messageElement = document.createElement('div');
+          messageElement.className = 'qa-message ai';
+          
+          const renderedContent = this.renderMarkdown(message.content);
+          const copyButton = this.createCopyButton();
+          
+          messageElement.innerHTML = `
+            <div class="qa-message-content">${renderedContent}</div>
+            ${copyButton}
+          `;
+          
+          this.qaMessages.appendChild(messageElement);
+          
+          // Setup copy button functionality
+          const copyBtn = messageElement.querySelector('.qa-copy-btn');
+          if (copyBtn) {
+            this.setupCopyButton(copyBtn, message.content);
+          }
+        }
+        // Add to qaHistory for context in new conversations
+        this.qaHistory.push({ role: message.role, content: message.content });
+      }
+      
+      // Hide empty state if we have messages
+      if (messages.length > 0 && this.qaEmptyState) {
+        this.qaEmptyState.style.display = 'none';
+      }
+      
+      // Scroll to bottom after loading all messages
+      this.scrollToBottom();
+      
+    } catch (error) {
+      console.error('Failed to load persisted messages:', error);
+      // Don't show error to user, just continue with empty conversation
+    }
+  }
+
   clearConversation() {
     this.qaHistory = [];
     if (this.qaMessages) {
@@ -594,10 +668,14 @@ class RightSidebarManager {
     }
   }
 
-  setCurrentNote(noteId) {
+  async setCurrentNote(noteId) {
     if (this.currentNoteId !== noteId) {
       this.currentNoteId = noteId;
-      this.clearConversation();
+      if (noteId) {
+        await this.loadPersistedMessages(noteId);
+      } else {
+        this.clearConversation();
+      }
     }
   }
 

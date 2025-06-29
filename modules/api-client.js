@@ -530,4 +530,87 @@ export class APIClient {
       return 'Unknown Date';
     }
   }
+
+  // Message operations
+  static async createMessage(noteId, role, content, sessionId = null) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/messages?user_id=${user.id}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        note_id: noteId,
+        role: role,
+        content: content,
+        session_id: sessionId
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create message');
+    }
+
+    return await response.json();
+  }
+
+  static async getMessagesForNote(noteId) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/messages/note/${noteId}?user_id=${user.id}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to get messages');
+    }
+
+    return await response.json();
+  }
+
+  static async getMessagesForSession(sessionId) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/messages/session/${sessionId}?user_id=${user.id}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to get messages');
+    }
+
+    return await response.json();
+  }
+
+  static async deleteMessagesForNote(noteId) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/messages/note/${noteId}?user_id=${user.id}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete messages');
+    }
+
+    return await response.json();
+  }
+
+  static async deleteMessagesForSession(sessionId) {
+    const user = authManager.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/messages/session/${sessionId}?user_id=${user.id}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete messages');
+    }
+
+    return await response.json();
+  }
 }

@@ -435,9 +435,6 @@ export function initializePodcastTile() {
   // Load the most recent podcast
   loadMostRecentPodcast();
   
-  // Initialize podcast menu
-  initializePodcastMenu();
-  
   // Handle play button click
   playBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -522,64 +519,6 @@ async function loadMostRecentPodcast() {
   }
 }
 
-// Initialize podcast menu functionality
-function initializePodcastMenu() {
-  const menuBtn = document.getElementById('podcastMenuBtn');
-  const menuDropdown = document.getElementById('podcastMenuDropdown');
-  const downloadBtn = document.getElementById('downloadPodcastBtn');
-  const viewAllBtn = document.getElementById('viewAllPodcastsBtn');
-  
-  if (!menuBtn || !menuDropdown) {
-    console.warn('Podcast menu elements not found');
-    return;
-  }
-  
-  // Toggle menu dropdown
-  menuBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isVisible = menuDropdown.style.display !== 'none';
-    menuDropdown.style.display = isVisible ? 'none' : 'block';
-  });
-  
-  // Close menu when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.podcast-menu-container')) {
-      menuDropdown.style.display = 'none';
-    }
-  });
-  
-  // Handle download button
-  if (downloadBtn) {
-    downloadBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      menuDropdown.style.display = 'none';
-      
-      try {
-        const audioSource = document.getElementById('podcastAudioSource');
-        if (audioSource && audioSource.src) {
-          const filename = audioSource.src.split('/').pop();
-          await window.downloadPodcastAudio(filename);
-        } else {
-          console.warn('No audio source available for download');
-        }
-      } catch (error) {
-        console.error('Error downloading podcast:', error);
-      }
-    });
-  }
-  
-  // Handle view all button
-  if (viewAllBtn) {
-    viewAllBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      menuDropdown.style.display = 'none';
-      
-      // For now, just load all podcasts (future: could open a modal or navigate to a new view)
-      loadAllPodcasts();
-      console.log('View all podcasts clicked - functionality to be enhanced');
-    });
-  }
-}
 
 // Load and display all podcasts for the user
 async function loadAllPodcasts(page = 1, limit = 10) {
@@ -792,19 +731,15 @@ function displayPodcastTile(filename, date, summaryPreview, updateTitle = false)
     }
   });
   
-  // Show audio controls, play button, and menu button for actual podcasts
+  // Show audio controls and play button for actual podcasts
   const audioContainer = document.getElementById('podcastTileAudio');
   const playButton = document.querySelector('.podcast-play-btn');
-  const menuButton = document.getElementById('podcastMenuBtn');
   
   if (audioContainer) {
     audioContainer.style.display = 'none'; // Initially hidden, can be toggled by clicking
   }
   if (playButton) {
     playButton.style.display = 'flex'; // Show play button for actual podcasts
-  }
-  if (menuButton) {
-    menuButton.style.display = 'flex'; // Show menu button for actual podcasts
   }
   
   // Show the tile
@@ -889,11 +824,6 @@ function showPodcastPlaceholder() {
     playButton.style.display = 'none';
   }
   
-  // Hide the three-dot menu button when no podcast is available
-  const menuButton = document.getElementById('podcastMenuBtn');
-  if (menuButton) {
-    menuButton.style.display = 'none';
-  }
   
   // Show the tile
   podcastTile.style.display = 'block';
