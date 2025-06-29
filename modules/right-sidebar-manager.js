@@ -12,6 +12,15 @@ class RightSidebarManager {
     this.isStreaming = false;
     this.initialized = false;
     
+    // Resize state
+    this.isResizing = false;
+    this.startX = 0;
+    this.startWidth = 0;
+    this.minWidth = 288;
+    this.maxWidth = 600;
+    this.defaultWidth = 350;
+    this.savedWidth = null;
+    
     // DOM elements
     this.rightSidebar = null;
     this.qaMessages = null;
@@ -19,6 +28,7 @@ class RightSidebarManager {
     this.qaSendBtn = null;
     this.rightSidebarToggle = null;
     this.qaEmptyState = null;
+    this.resizeHandle = null;
   }
 
   initialize() {
@@ -33,6 +43,7 @@ class RightSidebarManager {
     this.rightSidebarToggle = document.getElementById('rightSidebarToggle');
     this.qaVibeBtn = document.getElementById('qaVibeBtn');
     this.qaEmptyState = this.qaMessages?.querySelector('.qa-empty-state');
+    this.resizeHandle = document.getElementById('rightSidebarResizeHandle');
 
     if (!this.rightSidebar || !this.qaMessages || !this.qaInput || !this.qaSendBtn) {
       console.error('Right sidebar elements not found');
@@ -40,8 +51,10 @@ class RightSidebarManager {
     }
 
     this.setupEventListeners();
+    this.setupResizeHandlers();
     this.initTextarea();
     this.initializeVibeButtonState();
+    this.loadSavedWidth();
   }
 
   setupEventListeners() {
@@ -153,6 +166,168 @@ class RightSidebarManager {
     }
   }
 
+  setupResizeHandlers() {
+    if (!this.resizeHandle || !this.rightSidebar) return;
+
+    // Add mousedown to the handle and a wider area around it
+    const handleMouseDown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.startResize(e);
+    };
+
+    this.resizeHandle.addEventListener('mousedown', handleMouseDown);
+    
+    // Also listen for mousedown on the sidebar edge (first 12px from left)
+    this.rightSidebar.addEventListener('mousedown', (e) => {
+      const rect = this.rightSidebar.getBoundingClientRect();
+      const mouseX = e.clientX;
+      const sidebarLeft = rect.left;
+      
+      // If click is within 12px of left edge, start resize
+      if (mouseX >= sidebarLeft && mouseX <= sidebarLeft + 12) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.startResize(e);
+      }
+    });
+
+    // Global mouse events for resize with optimized handling
+    document.addEventListener('mousemove', (e) => {
+      if (this.isResizing) {
+        e.preventDefault();
+        this.handleResize(e);
+      }
+    }, { passive: false });
+
+    document.addEventListener('mouseup', () => {
+      if (this.isResizing) {
+        this.stopResize();
+      }
+    });
+
+    // Prevent text selection during resize
+    document.addEventListener('selectstart', (e) => {
+      if (this.isResizing) {
+        e.preventDefault();
+      }
+    });
+  }
+
+  startResize(e) {
+    // Don't allow resizing when collapsed
+    if (this.isCollapsed) return;
+    
+    this.isResizing = true;
+    this.startX = e.clientX;
+    this.startWidth = parseInt(window.getComputedStyle(this.rightSidebar).width, 10);
+    
+    this.rightSidebar.classList.add('resizing');
+    this.resizeHandle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
+  handleResize(e) {
+    if (!this.isResizing) return;
+
+    const deltaX = this.startX - e.clientX; // Negative delta = expanding left
+    const newWidth = this.startWidth + deltaX;
+    
+    // Constrain within bounds
+    const constrainedWidth = Math.max(this.minWidth, Math.min(this.maxWidth, newWidth));
+    
+    // Use requestAnimationFrame for smooth rendering
+    requestAnimationFrame(() => {
+      if (this.rightSidebar) {
+        this.rightSidebar.style.width = `${constrainedWidth}px`;
+        
+        // Trigger title bar resize check when sidebar width changes
+        this.triggerTitleResize();
+      }
+    });
+  }
+
+  stopResize() {
+    this.isResizing = false;
+    
+    this.rightSidebar.classList.remove('resizing');
+    this.resizeHandle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    
+    // Save the new width
+    this.saveWidth();
+  }
+
+  saveWidth() {
+    if (this.rightSidebar) {
+      const width = parseInt(window.getComputedStyle(this.rightSidebar).width, 10);
+      localStorage.setItem('right-sidebar-width', width.toString());
+    }
+  }
+
+  loadSavedWidth() {
+    const savedWidth = localStorage.getItem('right-sidebar-width');
+    if (savedWidth && this.rightSidebar) {
+      const width = parseInt(savedWidth, 10);
+      if (width >= this.minWidth && width <= this.maxWidth) {
+        this.rightSidebar.style.width = `${width}px`;
+      }
+    }
+  }
+
+  triggerTitleResize() {
+    // Trigger title bar resize check similar to window resize event
+    const titleInput = document.getElementById('titleInput');
+    if (titleInput) {
+      // Call the same logic used in notes-processor.js for window resize
+      const computedStyle = window.getComputedStyle(titleInput);
+      const lineHeight = parseFloat(computedStyle.lineHeight);
+      const fontSize = parseFloat(computedStyle.fontSize);
+      const minHeight = lineHeight || (fontSize * 1.2);
+      
+      titleInput.style.height = minHeight + 'px';
+      const scrollHeight = titleInput.scrollHeight;
+      const newHeight = Math.max(scrollHeight, minHeight);
+      
+      if (titleInput.style.height !== newHeight + 'px') {
+        titleInput.style.height = newHeight + 'px';
+      }
+    }
+  }
+
+  /**
+   * Continuously triggers title resize while the sidebar width is animating.
+   * Stops automatically when the width transition finishes.
+   */
+  animateTitleResizeDuringTransition() {
+    if (!this.rightSidebar) return;
+
+    // If an existing animation loop is running, do nothing
+    if (this._titleResizeRAF) return;
+
+    const loop = () => {
+      this.triggerTitleResize();
+      this._titleResizeRAF = requestAnimationFrame(loop);
+    };
+
+    // Start the loop
+    this._titleResizeRAF = requestAnimationFrame(loop);
+
+    // Stop the loop when the width transition ends
+    const onEnd = (e) => {
+      if (e.propertyName === 'width') {
+        cancelAnimationFrame(this._titleResizeRAF);
+        this._titleResizeRAF = null;
+        this.rightSidebar.removeEventListener('transitionend', onEnd);
+        // One final resize to ensure correct size
+        this.triggerTitleResize();
+      }
+    };
+    this.rightSidebar.addEventListener('transitionend', onEnd);
+  }
+
   async showSidebar(noteId = null) {
     if (!this.rightSidebar) return;
     
@@ -203,8 +378,15 @@ class RightSidebarManager {
   collapseSidebar() {
     if (!this.rightSidebar || this.isCollapsed) return;
     
+    // Save current width before collapsing
+    this.savedWidth = parseInt(window.getComputedStyle(this.rightSidebar).width, 10);
+    
     this.rightSidebar.classList.add('collapsed');
     this.rightSidebar.classList.remove('focused');
+    // Force the collapsed width with inline style to override any other styles
+    this.rightSidebar.style.width = '56px';
+    // Ensure title bar resizes during animation
+    this.animateTitleResizeDuringTransition();
     this.isCollapsed = true;
     localStorage.setItem('right-sidebar-collapsed', 'true');
   }
@@ -212,7 +394,34 @@ class RightSidebarManager {
   expandSidebar() {
     if (!this.rightSidebar || !this.isCollapsed) return;
     
+    // Temporarily override min-width so animation can start from 56px
+    this.rightSidebar.style.minWidth = '56px';
+    // Force reflow to make sure the browser registers the new min-width
+    // eslint-disable-next-line no-unused-expressions
+    this.rightSidebar.offsetWidth;
+
     this.rightSidebar.classList.remove('collapsed');
+    
+    // Restore previous width or use saved width from localStorage
+    const widthToRestore = this.savedWidth || 
+                          parseInt(localStorage.getItem('right-sidebar-width')) || 
+                          this.defaultWidth;
+    
+    // Ensure it's within bounds
+    const constrainedWidth = Math.max(this.minWidth, Math.min(this.maxWidth, widthToRestore));
+    this.rightSidebar.style.width = `${constrainedWidth}px`;
+    // Ensure title bar resizes during animation
+    this.animateTitleResizeDuringTransition();
+    
+    // Clean up the temporary min-width override after the transition
+    const onTransitionEnd = (e) => {
+      if (e.propertyName === 'width') {
+        this.rightSidebar.style.minWidth = '';
+        this.rightSidebar.removeEventListener('transitionend', onTransitionEnd);
+      }
+    };
+    this.rightSidebar.addEventListener('transitionend', onTransitionEnd);
+    
     this.isCollapsed = false;
     localStorage.setItem('right-sidebar-collapsed', 'false');
   }

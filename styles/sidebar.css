@@ -311,6 +311,8 @@
 /* Right Sidebar Styles */
 .right-sidebar {
     width: 350px;
+    min-width: 288px;
+    max-width: 600px;
     height: calc(100vh - 80px);
     background: rgba(255, 255, 255, 0.5);
     border-radius: 25px;
@@ -326,14 +328,61 @@
     opacity: 1;
 }
 
+.right-sidebar.resizing {
+    transition: none;
+}
+
+.right-sidebar-resize-handle {
+    position: absolute;
+    left: -6px;
+    top: 0;
+    bottom: 0;
+    width: 12px;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 10;
+    border-radius: 25px 0 0 25px;
+}
+
+.right-sidebar-resize-handle:hover,
+.right-sidebar-resize-handle.dragging {
+    background: rgba(116, 131, 242, 0.3);
+}
+
+.right-sidebar-resize-handle::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    opacity: 1;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.right-sidebar-resize-handle:hover::after,
+.right-sidebar-resize-handle.dragging::after {
+    background: rgba(116, 131, 242, 0.5);
+    opacity: 1;
+}
+
 .right-sidebar.focused {
     background: rgba(255, 255, 255, 0.65);
     transition: width 0.25s cubic-bezier(0.4,0,0.2,1), background 0.4s ease;
 }
 
 .right-sidebar.collapsed {
-    width: 56px;
-    cursor: pointer;
+    width: 56px !important;
+    min-width: 56px !important;
+    cursor: pointer !important;
+}
+
+/* Hide resize handle when sidebar is collapsed */
+.right-sidebar.collapsed .right-sidebar-resize-handle {
+    display: none !important;
 }
 
 .right-sidebar.collapsed .right-sidebar-header h3,

@@ -478,6 +478,7 @@
           
           <!-- Right Sidebar for Q&A -->
           <div class="right-sidebar" id="rightSidebar">
+            <div class="right-sidebar-resize-handle" id="rightSidebarResizeHandle"></div>
             <div class="right-sidebar-header">
               <h3>Q&A</h3>
               <button class="right-sidebar-toggle" id="rightSidebarToggle">
@@ -496,7 +497,7 @@
             <div class="right-sidebar-content">
               <div class="qa-messages" id="qaMessages">
                 <div class="qa-empty-state">
-                  <p>Ask questions about this transcript</p>
+                  <p>Ask questions about this meeting</p>
                 </div>
               </div>
               
@@ -507,7 +508,7 @@
                 <textarea 
                   id="qaInput" 
                   class="qa-input" 
-                  placeholder="Ask about this transcript..."
+                  placeholder="Ask about this meeting..."
                   rows="2"
                 ></textarea>
                 <button class="qa-send-btn" id="qaSendBtn" style="margin-bottom: 4px;" disabled>
