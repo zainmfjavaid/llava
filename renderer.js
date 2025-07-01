@@ -27,6 +27,24 @@ import { rightSidebarManager } from './modules/right-sidebar-manager.js';
 // Handle Deepgram transcription results
 window.electronAPI.onTranscriptionResult(handleTranscriptionResult);
 
+// Handle transcription connection open/close for debugging
+window.electronAPI.onTranscriptionOpen(() => {
+  console.log('[Renderer][Deepgram] Connection OPEN');
+});
+
+window.electronAPI.onTranscriptionClose((code) => {
+  console.log('[Renderer][Deepgram] Connection CLOSED', code);
+});
+
+// Handle metadata and silence watchdog notifications
+window.electronAPI.onTranscriptionMetadata((meta) => {
+  console.log('[Renderer][Deepgram] Metadata:', meta);
+});
+
+window.electronAPI.onTranscriptionSilence(() => {
+  console.warn('[Renderer][Watchdog] No transcript for >10s');
+});
+
 // Handle transcription errors
 window.electronAPI.onTranscriptionError(handleTranscriptionError);
 

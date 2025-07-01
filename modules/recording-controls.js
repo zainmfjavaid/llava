@@ -89,7 +89,8 @@ export async function startRecording() {
     // Clear all previous session data
     clearRecordingSession();
     
-    await window.electronAPI.startTranscription();
+    const transcriptionStartResponse = await window.electronAPI.startTranscription();
+    console.log('[Renderer] startTranscription response:', transcriptionStartResponse);
     
     // Smoothly transition to recording screen
     // Smoothly collapse sidebar

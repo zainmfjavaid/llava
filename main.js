@@ -159,19 +159,40 @@ ipcMain.handle('start-transcription', async (event) => {
       channels: 1
     });
 
-    // Handle transcription events
+    // ---------- Diagnostic counters ----------
+    let chunkCount = 0;
+    let chunkSendWarnCount = 0;
+    let lastTranscriptTime = Date.now();
+    const startTime = Date.now();
+
+    // Strategic debug logs – connection lifecycle
     transcriptionConnection.on(LiveTranscriptionEvents.Open, () => {
+      console.log('[Main][Deepgram] WebSocket connection OPEN');
+      event.sender.send('transcription-open');
+      lastTranscriptTime = Date.now();
+    });
+
+    // Deepgram metadata / warning frames (may be "Metadata" or not present in enum)
+    const metadataEvent = LiveTranscriptionEvents.Metadata || 'Metadata';
+    transcriptionConnection.on(metadataEvent, (meta) => {
+      console.log('[Main][Deepgram] METADATA:', JSON.stringify(meta));
+      event.sender.send('transcription-metadata', meta);
     });
 
     transcriptionConnection.on(LiveTranscriptionEvents.Transcript, (data) => {
+      // Forward to renderer
       event.sender.send('transcription-result', data);
+      lastTranscriptTime = Date.now();
     });
 
     transcriptionConnection.on(LiveTranscriptionEvents.Error, (error) => {
+      console.error('[Main][Deepgram] ERROR:', error);
       event.sender.send('transcription-error', error.message || error.toString());
     });
 
-    transcriptionConnection.on(LiveTranscriptionEvents.Close, () => {
+    transcriptionConnection.on(LiveTranscriptionEvents.Close, (code) => {
+      console.warn('[Main][Deepgram] WebSocket connection CLOSED', code);
+      event.sender.send('transcription-close', code);
     });
 
 
@@ -206,9 +227,22 @@ ipcMain.handle('start-transcription', async (event) => {
 
     // Handle audio data
     audioRecordingProcess.stdout.on('data', (chunk) => {
+      chunkCount += 1;
       // Send to Deepgram for live transcription
       if (transcriptionConnection && transcriptionConnection.getReadyState() === 1) {
         transcriptionConnection.send(chunk);
+      } else {
+        if (!chunkSendWarnCount) chunkSendWarnCount = 0;
+        chunkSendWarnCount += 1;
+        if (chunkSendWarnCount % 50 === 0) {
+          console.warn('[Main] Tried to send audio chunk but socket not ready. warnings so far:', chunkSendWarnCount);
+        }
+      }
+
+      // Log every 100 chunks to avoid flooding
+      if (chunkCount % 100 === 0) {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Main] Sent ${chunkCount} audio chunks to Deepgram (elapsed ${elapsed}s)`);
       }
     });
 
@@ -216,9 +250,27 @@ ipcMain.handle('start-transcription', async (event) => {
       console.log('[Main] FFmpeg stderr:', data.toString());
     });
 
+    // -------- Silence watchdog --------
+    const silenceIntervalMs = 10000; // 10 seconds
+    const silenceTimer = setInterval(() => {
+      if (!transcriptionConnection) return;
+      const now = Date.now();
+      if (now - lastTranscriptTime > silenceIntervalMs) {
+        console.warn('[Main][Watchdog] No transcript received for >10s');
+        event.sender.send('transcription-silence');
+        // Update to avoid spamming every tick
+        lastTranscriptTime = now;
+      }
+    }, 5000);
+
     audioRecordingProcess.on('exit', (code) => {
       console.log('[Main] FFmpeg process exited with code:', code);
       audioRecordingProcess = null;
+    });
+
+    // Clean up on connection close
+    transcriptionConnection.on(LiveTranscriptionEvents.Close, () => {
+      clearInterval(silenceTimer);
     });
 
     return 'Recording started';

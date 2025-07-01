@@ -12,6 +12,8 @@ export function handleTranscriptionResult(data) {
     const transcript = alternative.transcript;
     
     if (transcript && transcript.trim().length > 0) {
+      // Debug log – show first 40 chars of transcript
+      console.log('[Renderer][Transcript] Received', data.is_final ? 'FINAL' : 'INTERIM', ':', transcript.slice(0, 40));
       // Get timing information
       const segmentStart = data.start || 0;
       const segmentDuration = data.duration || 0;
